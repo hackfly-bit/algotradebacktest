@@ -1,0 +1,13 @@
+---
+description: Tes regresi engine, look-ahead, isolasi plugin
+globs: tests/**/*.py,**/test_*.py
+alwaysApply: false
+---
+
+# Tests
+
+- Parity: final_equity / sharpe vs notebook (toleransi ~1e-3).
+- Look-ahead: entry time > signal bar time.
+- Plugin isolation: `engine.strategies` tidak import backtester/metrics.
+- Gate: OOS gagal => FAIL; 6/6 => ROBUST.
+- Tes engine tanpa Django TestCase jika memungkinkan (`tests/test_engine_*.py`).

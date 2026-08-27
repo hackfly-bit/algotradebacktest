@@ -1,0 +1,16 @@
+---
+description: Model SQLite Higgs, JSONField, tanpa OHLCV bar
+globs: "**/models.py"
+alwaysApply: false
+---
+
+# Models SQLite
+
+- Dataset menyimpan path file + JSON validasi, bukan bar M1.
+- `BacktestRun.status`: queued, running, done, failed.
+- `params` dan costs di JSONField / kolom skalar seperti CONVERSION_PLAN.md.
+- Trade, MetricSet, WalkForwardFold, RobustnessRow, MonteCarloSummary, DecisionGate, ExportFile.
+- EquityPoint di-downsample jika terlalu panjang.
+- Jangan simpan 10k kurva Monte Carlo.
+
+Index FK `run` pada tabel anak.

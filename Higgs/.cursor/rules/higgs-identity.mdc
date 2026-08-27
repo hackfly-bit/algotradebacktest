@@ -1,0 +1,21 @@
+---
+description: Identitas proyek Higgs, stack, dan larangan domain
+alwaysApply: true
+---
+
+# Higgs identity
+
+- App root adalah folder `Higgs/`. Jangan menulis aplikasi di parent notebook.
+- Stack: Django 6.1 (`Django>=6.1,<6.2`), Python 3.12+, SQLite, Tailwind CSS v4, HTMX, Chart.js, `django.tasks`.
+- Bahasa UI/dokumen: Indonesia. Identifier kode: Inggris.
+- Perintah: cmd.exe (`setup.bat`). Jangan PowerShell atau Bash.
+- Rules-based momentum saja. Dilarang ML: `fit()`, `predict()`, sklearn, XGBoost, neural net, label target.
+
+```python
+# BAD
+model.fit(X, y)
+
+# GOOD
+out["signal"] = 0
+out.loc[long_cond, "signal"] = 1
+```

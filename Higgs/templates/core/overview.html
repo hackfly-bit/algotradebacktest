@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="border-b border-black/10 pb-3 dark:border-white/10">
+  {% if dataset_count %}
+  <h2 class="text-sm font-medium">{{ dataset_count }} dataset terdaftar</h2>
+  <p class="mt-1 max-w-prose text-sm text-ink/75 dark:text-ink-dark/75">
+    Run belum ada. Angka KPI backtest tidak ditampilkan.
+  </p>
+  {% if latest_dataset %}
+  <p class="mt-2 font-mono text-[12px] text-ink/70 dark:text-ink-dark/70">
+    Terbaru:
+    <a class="text-accent hover:underline dark:text-accent-dark" href="{% url 'marketdata:dataset_detail' latest_dataset.pk %}">{{ latest_dataset.source_name }}</a>
+  </p>
+  {% endif %}
+  {% else %}
+  <h2 class="text-sm font-medium">Cockpit kosong</h2>
+  <p class="mt-1 max-w-prose text-sm text-ink/75 dark:text-ink-dark/75">
+    Belum ada dataset. Belum ada run. Angka KPI tidak ditampilkan karena belum ada hasil backtest.
+  </p>
+  {% endif %}
+  <div class="mt-3 flex flex-wrap gap-2">
+    <a href="{% url 'marketdata:dataset_list' %}" class="btn-primary">Ke dataset</a>
+    <a href="{% url 'backtests:run_new' %}" class="btn-ghost">Run baru</a>
+  </div>
+</section>
+{% endblock %}

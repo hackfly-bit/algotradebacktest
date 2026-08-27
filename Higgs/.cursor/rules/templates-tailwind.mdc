@@ -1,0 +1,20 @@
+---
+description: Template Django + Tailwind v4 sesuai DESIGN.md
+globs: templates/**/*.html
+alwaysApply: false
+---
+
+# Templates
+
+- Extend `base.html`. Utility Tailwind v4. Partial HTMX untuk tab/progress.
+- Baca `docs/DESIGN.md`: aksen teal, radius 6px, angka mono.
+- Chart.js di tab equity/MC. Satu library chart.
+- Form: widget Django + class Tailwind, bukan JS form builder.
+
+```html
+<!-- BAD -->
+<div class="bg-purple-500 blur-3xl">KPI 12,345</div>
+
+<!-- GOOD -->
+<p class="text-xs text-stone-500">Belum ada run. Buat run baru.</p>
+```

@@ -1,0 +1,75 @@
+@import "tailwindcss" source(none);
+
+@source "../../templates";
+@source "../../apps";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "IBM Plex Sans", "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --color-canvas: #f4f1ea;
+  --color-canvas-dark: #121410;
+  --color-surface: #fffcf7;
+  --color-surface-dark: #1c1e1a;
+  --color-ink: #1a1c18;
+  --color-ink-dark: #e8e6dc;
+  --color-accent: #0f7a6c;
+  --color-accent-dark: #3d9a8c;
+  --color-profit: #1b7f4e;
+  --color-loss: #b42318;
+  --color-warn: #b45309;
+  --radius-sm: 6px;
+}
+
+@layer base {
+  [x-cloak] {
+    display: none !important;
+  }
+
+  html {
+    font-size: 14px;
+  }
+
+  body {
+    @apply antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-[6px] bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent-dark dark:text-canvas-dark;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-[6px] border border-black/10 bg-transparent px-3 py-1.5 text-sm text-ink hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:border-white/10 dark:text-ink-dark dark:hover:bg-white/5;
+  }
+
+  .field-input {
+    @apply mt-1 w-full rounded-[6px] border border-black/15 bg-surface px-2.5 py-1.5 text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent dark:border-white/15 dark:bg-surface-dark dark:text-ink-dark;
+  }
+
+  .nav-link {
+    @apply flex items-center rounded-[6px] px-2 py-1.5 text-sm text-ink/80 hover:bg-black/5 hover:text-ink dark:text-ink-dark/80 dark:hover:bg-white/5 dark:hover:text-ink-dark;
+  }
+
+  .nav-link-active {
+    @apply bg-accent/10 font-medium text-accent dark:bg-accent-dark/15 dark:text-accent-dark;
+  }
+
+  .data-table {
+    @apply w-full min-w-[36rem] text-sm;
+  }
+
+  .data-table th {
+    @apply sticky top-0 bg-surface px-2 py-1 text-left text-[11px] font-medium text-ink/60 dark:bg-surface-dark dark:text-ink-dark/55;
+  }
+
+  .data-table td {
+    @apply border-t border-black/10 px-2 py-1 dark:border-white/10;
+  }
+
+  .data-table tbody tr:hover {
+    @apply bg-black/[0.03] dark:bg-white/[0.04];
+  }
+}

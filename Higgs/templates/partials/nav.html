@@ -1,0 +1,10 @@
+{% with ns=request.resolver_match.namespace name=request.resolver_match.url_name %}
+<a href="{% url 'core:overview' %}" class="nav-link {% if ns == 'core' and name == 'overview' %}nav-link-active{% endif %}">Ringkasan</a>
+<a href="{% url 'marketdata:dataset_list' %}" class="nav-link {% if ns == 'marketdata' %}nav-link-active{% endif %}">Dataset</a>
+<a href="{% url 'strategies:strategy_list' %}" class="nav-link {% if ns == 'strategies' %}nav-link-active{% endif %}">Strategi</a>
+<a href="{% url 'backtests:run_new' %}" class="nav-link {% if ns == 'backtests' and name == 'run_new' %}nav-link-active{% endif %}">Run baru</a>
+<a href="{% url 'backtests:run_list' %}" class="nav-link {% if ns == 'backtests' and name == 'run_list' %}nav-link-active{% endif %}">Run</a>
+<a href="{% url 'backtests:compare' %}" class="nav-link {% if ns == 'backtests' and name == 'compare' %}nav-link-active{% endif %}">Bandingkan</a>
+<a href="{% url 'reports:export_list' %}" class="nav-link {% if ns == 'reports' %}nav-link-active{% endif %}">Ekspor</a>
+<a href="{% url 'core:settings' %}" class="nav-link {% if ns == 'core' and name == 'settings' %}nav-link-active{% endif %}">Pengaturan</a>
+{% endwith %}

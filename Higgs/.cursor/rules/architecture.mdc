@@ -1,0 +1,19 @@
+---
+description: Pemisahan engine vs Django apps dan lokasi file baru
+alwaysApply: true
+---
+
+# Architecture
+
+- `engine/` = pandas/numpy murni. **Tidak boleh** `import django`.
+- `apps/` = HTTP, models, forms, tasks, templates wiring.
+- `config/` = settings, urls, WSGI/ASGI.
+- Indikator tidak menulis `signal`. Plugin tidak hitung fee/Sharpe. Backtester tidak mengenal nama strategy.
+- OHLCV M1 tidak disimpan bar-per-row di SQLite. File + cache H1; metadata di `Dataset`.
+
+```text
+# BAD: rumus ATR di views.py
+# GOOD: views memanggil engine.indicators.add_indicators(df)
+```
+
+File strategy baru hanya di `engine/strategies/*.py` + `@register_strategy`.

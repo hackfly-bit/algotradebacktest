@@ -1,0 +1,18 @@
+---
+description: Taste-Skill, Ponytail, dan token dashboard Higgs
+alwaysApply: true
+---
+
+# UI taste
+
+Sebelum menambah/ubah template HTML:
+
+1. Baca `docs/DESIGN.md` dan skill Taste-Skill di `.agents/skills/` (atau `.cursor/skills/`).
+2. Density 8–9, motion 2–3, satu aksen teal, light+dark.
+3. Ponytail: jangan SPA, jangan CSS/chart library kedua, jangan halaman palsu.
+
+Dilarang: ungu AI, mesh blob, tiga kartu marketing, fake dashboard div, angka dummy yang berpura-pura live.
+
+Empty state harus jujur ("Belum ada run"). Data hanya dari engine/SQLite.
+
+Jangan pakai Ponytail untuk menghapus tab WF / MC / export.

@@ -1,0 +1,16 @@
+---
+description: Wajib query Codegraph dan Codebase Memory sebelum edit
+alwaysApply: true
+---
+
+# AI graph
+
+Sebelum edit non-trivial di Higgs:
+
+1. Codegraph: `codegraph_explore` dengan `projectPath` = path absolut folder Higgs.
+2. Codebase Memory: `search_graph` / `search_code` dengan `project: Higgs`.
+3. Baru Grep/Read jika file belum terindex.
+
+Setelah fase yang menambah banyak simbol: `codegraph index` (bukan `upgrade` otomatis) dan `index_repository` Higgs.
+
+Jangan menganggap workspace parent (notebook) sebagai project graph default.

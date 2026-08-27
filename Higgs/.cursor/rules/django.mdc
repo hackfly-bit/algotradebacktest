@@ -1,0 +1,24 @@
+---
+description: Django 6.1 settings, views, tasks, dan URL
+globs: apps/**/*.py,config/**/*.py
+alwaysApply: false
+---
+
+# Django 6.1
+
+- Settings: `TASKS` (database backend) untuk job. `MAILERS` bukan `EMAIL_BACKEND` baru.
+- SQLite: `OPTIONS.timeout` >= 20.
+- Views tipis: form + enqueue task. Backtest tidak di view.
+- Enqueue setelah commit: `transaction.on_commit(lambda: enqueue_run.enqueue(run_id=...))`.
+- Semua halaman app: `login_required`.
+- Apps: `apps.core`, `marketdata`, `strategies`, `backtests`, `reports`.
+
+```python
+# BAD
+def create_run(request):
+    run_backtest(df)  # blocking
+
+# GOOD
+run = BacktestRun.objects.create(status="queued", ...)
+transaction.on_commit(lambda: enqueue_run.enqueue(run_id=run.pk))
+```

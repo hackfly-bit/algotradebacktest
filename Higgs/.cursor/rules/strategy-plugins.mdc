@@ -1,0 +1,25 @@
+---
+description: Kontrak plugin @register_strategy
+globs: engine/strategies/**/*.py
+alwaysApply: false
+---
+
+# Strategy plugins
+
+- Satu file satu `@register_strategy`. Auto-discover `engine/strategies/*.py`.
+- Input: OHLCV + indikator + `params` dict.
+- Output: `signal` in `{1, -1, 0}`, `sl_atr`, `tp_atr`.
+- Docstring = logic_spec untuk export MQL5.
+- Dilarang: load CSV, fee, Sharpe, `fit()`, mengubah split IS/OOS.
+
+```python
+@register_strategy
+def ema_rsi_volume(df, params=None):
+    """LONG jika EMA_fast > EMA_slow AND RSI > threshold."""
+    ...
+    out["signal"] = 0
+    out.loc[long_cond, "signal"] = 1
+    out["sl_atr"] = p.get("atr_sl", 2.0)
+    out["tp_atr"] = p.get("atr_tp", 4.0)
+    return out
+```
