@@ -28,3 +28,5 @@ Taste-Skill + `docs/DESIGN.md`. Density 8–9. Ponytail: jangan over-build; jang
 ## Fase
 
 Fase 2 (data layer) selesai. Berikutnya Fase 3: indikator (`engine/indicators.py`), tanpa sinyal atau backtest.
+
+**Backlog (tidak memblokir Fase 3):** [Fase 2b](docs/CONVERSION_PLAN.md#fase-2b--bootstrap-dataset-jika-csv-merged-tidak-ada) — jika `XAUUSD_2009_2026_M1.csv` tidak ada, unduh + merge dari HuggingFace `fokan/xauusd-2009-2026`.

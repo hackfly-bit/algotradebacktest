@@ -1,6 +1,7 @@
 # Large tick data — GitHub rejects files over 100MB
 XAUUSD_2009_2026_M1.csv
 *.csv
+dataset/
 
 # OS
 Thumbs.db

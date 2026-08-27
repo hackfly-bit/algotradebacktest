@@ -28,7 +28,7 @@ Bukan sistem prediksi harga. Tidak ada supervised learning.
 |---------|--------|
 | [`XAUUSD_Momentum_Pipeline.ipynb`](../../XAUUSD_Momentum_Pipeline.ipynb) | Implementasi yang harus di-port (angka regresi) |
 | [`STRATEGY_DEVELOPMENT_PIPELINE.md`](../../STRATEGY_DEVELOPMENT_PIPELINE.md) | Aturan domain, isolasi layer, template export |
-| [`XAUUSD_2009_2026_M1.csv`](../../XAUUSD_2009_2026_M1.csv) | Dataset awal (~5,89 juta bar M1, 2009-03-15 s.d. 2026-01-09) |
+| [`XAUUSD_2009_2026_M1.csv`](../../XAUUSD_2009_2026_M1.csv) | Dataset awal (~5,89 juta bar M1, 2009-03-15 s.d. 2026-01-09). **Tidak di-commit** (limit GitHub 100MB). Jika file tidak ada, kerjakan [Fase 2b](#fase-2b--bootstrap-dataset-jika-csv-merged-tidak-ada). |
 | Folder [`exports/`](../../exports/) | Contoh spec MQL5 yang sudah dihasilkan notebook |
 
 Notebook lama ML (`archive/BackTestXau_ML.ipynb`) **tidak** di-port.
@@ -643,6 +643,46 @@ Sesuaikan `INSTALLED_APPS` path. Tailwind v4 CLI: `npx @tailwindcss/cli` scan te
 **Kontrak:** output validasi setara notebook (`duplicate_ts`, `ohlc_invalid`, `volume_zero_pct`, `volume_dead`).
 
 **DoD:** Dataset XAUUSD M1 terdaftar; H1 ~100k bar; `volume_usable` False untuk file saat ini.
+
+### Fase 2b — Bootstrap dataset jika CSV merged tidak ada
+
+**Status:** backlog (tidak memblokir Fase 3). Wajib sebelum clone GitHub bisa ingest tanpa file lokal.
+
+**Tujuan:** Jika `XAUUSD_2009_2026_M1.csv` tidak ada di root repo, unduh tick M1 tahunan dari HuggingFace, gabungkan, dan tulis file merged yang sama kontrak kolomnya dengan notebook.
+
+**Sumber:** [huggingface.co/datasets/fokan/xauusd-2009-2026](https://huggingface.co/datasets/fokan/xauusd-2009-2026)
+
+**Alur (port notebook Colab, harus Windows/cmd.exe):**
+
+1. Jika `XAUUSD_2009_2026_M1.csv` sudah ada di root `AlgoTradeBacktest/`, skip.
+2. `dataset/` — unduh `DAT_MT_XAUUSD_M1_{2009..2025}.csv` plus `DAT_MT_XAUUSD_M1_202601.csv` dari `resolve/main/` (skip file yang sudah ada).
+3. Baca tanpa header, kolom: `Date`, `Time`, `Open`, `High`, `Low`, `Close`, `Volume`.
+4. `Datetime = Date + Time`; drop `Date`/`Time`; urutan kolom akhir: `Datetime`, `Open`, `High`, `Low`, `Close`, `Volume`.
+5. Export `XAUUSD_2009_2026_M1.csv` di root repo (`index=False`).
+6. Hapus file mentah di `dataset/` setelah merge sukses.
+
+**File target:**
+
+- `prepare_dataset.bat` di root repo (cmd.exe)
+- Script Python di root (bukan `engine/` — ini persiapan file, bukan rumus trading)
+- `dataset/` di `.gitignore`
+
+**Larangan port Colab:**
+
+- Jangan `wget`, `os.system`, magic `!ls` / `display()`
+- Unduh dengan `urllib.request` (stdlib) atau `pandas`; perintah dokumentasi = cmd.exe
+- Jangan commit CSV merged atau file tahunan (sudah > 100MB)
+
+**Checklist:**
+
+- [ ] Skip jika merged CSV sudah ada
+- [ ] Resume unduhan per-file jika sebagian `dataset/` sudah terisi
+- [ ] Kontrak kolom identik notebook (`Datetime` + OHLCV kapital)
+- [ ] File mentah dihapus setelah export
+- [ ] README: satu perintah bootstrap untuk clone tanpa CSV
+- [ ] Opsional: panggil dari empty state `/datasets/` ("siapkan dataset default") tanpa menjalankan unduhan di request HTTP sinkron — job worker jika di UI
+
+**DoD:** Clone repo tanpa `XAUUSD_2009_2026_M1.csv`, jalankan `prepare_dataset.bat`, file merged muncul; `ingest_dataset` Fase 2 tetap jalan tanpa ubah kontrak.
 
 ### Fase 3 — Indikator
 
