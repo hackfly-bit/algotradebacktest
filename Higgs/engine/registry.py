@@ -47,14 +47,28 @@ def register_strategy(fn: Callable) -> Callable:
 
 
 def list_strategies() -> list[str]:
-    return sorted(STRATEGY_REGISTRY)
+    from engine.custom_registry import list_custom_strategies
+
+    return sorted(set(STRATEGY_REGISTRY) | set(list_custom_strategies()))
 
 
 def get_strategy(name: str) -> Callable:
-    if name not in STRATEGY_REGISTRY:
-        available = ", ".join(list_strategies()) or "(kosong)"
-        raise KeyError(f"Strategy '{name}' tidak ditemukan. Tersedia: {available}")
-    return STRATEGY_REGISTRY[name]
+    if name in STRATEGY_REGISTRY:
+        return STRATEGY_REGISTRY[name]
+    from engine.custom_registry import CUSTOM_STRATEGY_REGISTRY
+
+    if name in CUSTOM_STRATEGY_REGISTRY:
+        return CUSTOM_STRATEGY_REGISTRY[name]
+    available = ", ".join(list_strategies()) or "(kosong)"
+    raise KeyError(f"Strategy '{name}' tidak ditemukan. Tersedia: {available}")
+
+
+def get_strategy_spec(name: str) -> str:
+    if name in STRATEGY_SPECS:
+        return STRATEGY_SPECS[name]
+    from engine.custom_registry import CUSTOM_STRATEGY_SPECS
+
+    return CUSTOM_STRATEGY_SPECS.get(name, "")
 
 
 def resolve_strategy_queue(spec) -> list[str]:
@@ -64,10 +78,11 @@ def resolve_strategy_queue(spec) -> list[str]:
             raise KeyError("Tidak ada strategy terdaftar.")
         return names
     names = [spec] if isinstance(spec, str) else list(spec)
-    missing = [n for n in names if n not in STRATEGY_REGISTRY]
+    available = set(STRATEGY_REGISTRY) | set(list_strategies())
+    missing = [n for n in names if n not in available]
     if missing:
-        available = ", ".join(list_strategies()) or "(kosong)"
-        raise KeyError(f"Strategy tidak ditemukan: {missing}. Tersedia: {available}")
+        available_list = ", ".join(list_strategies()) or "(kosong)"
+        raise KeyError(f"Strategy tidak ditemukan: {missing}. Tersedia: {available_list}")
     return names
 
 

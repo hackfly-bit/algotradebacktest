@@ -113,6 +113,18 @@ Lima plugin rules-based (sama dengan notebook):
 
 Klik nama strategi → parameter default + docstring (`logic_spec`).
 
+#### Strategy Builder (`/strategies/builder/`)
+
+Buat strategi **tanpa coding Python**:
+
+1. **Builder** → pilih template (breakout, EMA/RSI, gemini, claude, kimi)
+2. Edit definisi JSON v1 (rules, params, exit SL/TP)
+3. Set status **active** → muncul di form Run baru dan screening `*`
+4. **Preview** sinyal + **Quick test** mini backtest
+5. **Export/Import JSON** untuk share antar install
+
+Custom slug: `custom_<nama>` (contoh `custom_my_breakout`).
+
 ---
 
 ### 4. Screening cepat — semua strategi (`*`)
@@ -240,7 +252,7 @@ set PYTHONPATH=.
 python -m pytest tests\ -q
 ```
 
-Harus **53 passed** (parity notebook, look-ahead, UI, walk-forward, gate, deep pipeline).
+Harus **69 passed** (parity notebook, rule interpreter, builder UI, walk-forward, gate, deep pipeline).
 
 Parity penuh membutuhkan dataset bootstrap + ingest terlebih dahulu.
 

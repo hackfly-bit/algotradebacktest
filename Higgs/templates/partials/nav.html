@@ -12,9 +12,13 @@
 </a>
 
 <p class="nav-section-label">Research</p>
-<a href="{% url 'strategies:strategy_list' %}" class="nav-link {% if ns == 'strategies' %}nav-link-active{% endif %}">
+<a href="{% url 'strategies:strategy_list' %}" class="nav-link {% if ns == 'strategies' and name != 'builder_list' and name != 'builder_new' and 'builder' not in name %}nav-link-active{% endif %}">
   <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l3-4 3 2 6-7"/></svg>
   Strategi
+</a>
+<a href="{% url 'strategies:builder_list' %}" class="nav-link {% if ns == 'strategies' and 'builder' in name %}nav-link-active{% endif %}">
+  <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h10v10H3zM6 6h4M6 9h4"/></svg>
+  Builder
 </a>
 <a href="{% url 'backtests:run_new' %}" class="nav-link {% if ns == 'backtests' and name == 'run_new' %}nav-link-active{% endif %}">
   <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mx-auto flex max-w-[1200px] flex-col gap-3">
+  <p class="breadcrumb">
+    <a href="{% url 'strategies:builder_list' %}">Builder</a> /
+    {% if is_new %}Baru{% else %}{{ strategy.label }}{% endif %}
+  </p>
+
+  <div class="grid gap-3 lg:grid-cols-3">
+    <section class="panel lg:col-span-2">
+      <div class="panel-header">
+        <h2 class="panel-title">{% if is_new %}Strategi baru{% else %}Edit strategi{% endif %}</h2>
+        <p class="panel-subtitle">Definisi JSON v1 · tanpa coding Python</p>
+      </div>
+      <div class="panel-body">
+        <form method="post" class="space-y-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="save">
+          {% if form.non_field_errors %}<p class="text-sm text-loss">{{ form.non_field_errors.0 }}</p>{% endif %}
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="block text-[12px] font-medium">{{ form.label.label }}{{ form.label }}{% if form.label.errors %}<span class="text-loss">{{ form.label.errors.0 }}</span>{% endif %}</label>
+            <label class="block text-[12px] font-medium">{{ form.slug.label }}{{ form.slug }}{% if form.slug.errors %}<span class="text-loss">{{ form.slug.errors.0 }}</span>{% endif %}</label>
+            <label class="block text-[12px] font-medium">{{ form.status.label }}{{ form.status }}</label>
+            <label class="flex items-center gap-2 text-[12px] font-medium">{{ form.allow_short }} {{ form.allow_short.label }}</label>
+          </div>
+          {% if is_new %}
+          <label class="block text-[12px] font-medium">{{ form.template_key.label }}{{ form.template_key }}</label>
+          {% endif %}
+          <label class="block text-[12px] font-medium">{{ form.description.label }}{{ form.description }}</label>
+          <label class="block text-[12px] font-medium">{{ form.definition_raw.label }}{{ form.definition_raw }}{% if form.definition_raw.errors %}<span class="text-loss">{{ form.definition_raw.errors.0 }}</span>{% endif %}</label>
+          <p class="text-[11px] text-ink/55">Operator: gt, lt, gte, lte, volume_filter, touch_in_last_n, squeeze, rising, crosses_above. Rolling wajib shift ≥ 1.</p>
+          <button type="submit" class="btn-primary">Simpan</button>
+        </form>
+      </div>
+    </section>
+
+    <aside class="flex flex-col gap-3">
+      {% if not is_new %}
+      <section class="panel">
+        <div class="panel-header"><h2 class="panel-title">Aksi</h2></div>
+        <div class="panel-body flex flex-col gap-2">
+          <a href="{% url 'strategies:builder_preview' strategy.pk %}" class="btn-ghost-sm">Preview sinyal</a>
+          <a href="{% url 'strategies:builder_export' strategy.pk %}" class="btn-ghost-sm">Export JSON</a>
+          <a href="{% url 'strategies:strategy_detail' strategy.slug %}" class="btn-ghost-sm">Lihat spec</a>
+          <form method="post">{% csrf_token %}<input type="hidden" name="action" value="duplicate"><button class="btn-ghost-sm w-full">Duplikat</button></form>
+          <form method="post" action="{% url 'strategies:builder_archive' strategy.pk %}">{% csrf_token %}<button class="btn-ghost-sm w-full text-loss">Arsipkan</button></form>
+        </div>
+      </section>
+      <section class="panel" id="quick-test-panel">
+        <div class="panel-header"><h2 class="panel-title">Quick test</h2></div>
+        <div class="panel-body text-[12px]">
+          <button type="button" class="btn-primary w-full" id="quick-test-btn" data-url="{% url 'strategies:builder_quick_test' strategy.pk %}">Jalankan mini backtest</button>
+          <pre id="quick-test-out" class="mt-2 whitespace-pre-wrap font-mono text-[11px] text-ink/70"></pre>
+        </div>
+      </section>
+      {% endif %}
+      <section class="panel">
+        <div class="panel-header"><h2 class="panel-title">Import JSON</h2></div>
+        <div class="panel-body">
+          <form method="post" action="{% url 'strategies:builder_import' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ import_form.file }}
+            <input name="slug" class="field-input mt-2 text-[12px]" placeholder="slug import">
+            <button class="btn-ghost-sm mt-2">Import</button>
+          </form>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+{% if not is_new %}
+<script>
+document.getElementById('quick-test-btn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('quick-test-btn');
+  const out = document.getElementById('quick-test-out');
+  out.textContent = 'Menghitung…';
+  const resp = await fetch(btn.dataset.url, {method:'POST', headers:{'X-CSRFToken': '{{ csrf_token }}'}});
+  const data = await resp.json();
+  out.textContent = JSON.stringify(data, null, 2);
+});
+</script>
+{% endif %}
+{% endblock %}

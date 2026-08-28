@@ -7,7 +7,7 @@ from django import forms
 import engine.strategies  # noqa: F401
 from apps.core.forms import default_run_initial
 from apps.marketdata.models import Dataset
-from engine.registry import list_strategies
+from apps.strategies.services import list_run_strategies
 
 
 class BacktestRunForm(forms.Form):
@@ -66,7 +66,7 @@ class BacktestRunForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        choices = [("*", "Semua strategi (*)")] + [(n, n) for n in list_strategies()]
+        choices = [("*", "Semua strategi (*)")] + list_run_strategies()
         self.fields["strategy_name"].choices = choices
         if not self.fields["dataset"].queryset.exists():
             self.fields["dataset"].empty_label = "Tidak ada dataset"

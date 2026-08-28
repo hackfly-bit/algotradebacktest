@@ -43,6 +43,9 @@
           <span class="font-mono">SL / TP / EOD</span>
         </div>
         <a href="{% url 'backtests:run_new' %}" class="btn-primary mt-2 w-full">Jalankan strategi ini</a>
+        {% if is_custom and builder_id %}
+        <a href="{% url 'strategies:builder_edit' builder_id %}" class="btn-ghost-sm mt-2 w-full">Edit di Builder</a>
+        {% endif %}
       </div>
     </section>
   </div>

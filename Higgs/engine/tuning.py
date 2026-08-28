@@ -61,7 +61,47 @@ STRATEGY_TUNING: dict[str, StrategyTuning] = {
 
 
 def get_strategy_tuning(strategy_name: str) -> StrategyTuning:
+    from engine.custom_registry import get_custom_definition
+
+    custom = get_custom_definition(strategy_name)
+    if custom:
+        return _tuning_from_definition(custom)
     return STRATEGY_TUNING.get(strategy_name, _ema_tuning())
+
+
+def _grid_values(spec: dict) -> tuple:
+    """Build a small grid from param spec min/max/default."""
+    default = spec.get("default")
+    mn = spec.get("min", default)
+    mx = spec.get("max", default)
+    if spec.get("type") == "int":
+        mn, mx, default = int(mn), int(mx), int(default)
+        if mn == mx:
+            return (default,)
+        mid = int(default)
+        return tuple(sorted({mn, mid, mx, max(mn + 1, (mn + mx) // 2), min(mx - 1, mid + 1)}))
+    return (float(default), float(default) * 0.9, float(default) * 1.1)
+
+
+def _tuning_from_definition(defn: dict) -> StrategyTuning:
+    params = defn.get("params") or {}
+    optimizable = [k for k, v in params.items() if v.get("optimizable")]
+    if not optimizable:
+        return _ema_tuning()
+    key = optimizable[0]
+    spec = params[key]
+    wf_vals = _grid_values(spec)[:3] if len(_grid_values(spec)) >= 3 else _grid_values(spec)
+    grid_vals = _grid_values(spec)
+    wf_variants = tuple({key: v} for v in wf_vals)
+    param_grid = tuple({key: v} for v in grid_vals)
+    perturb = tuple({key: v} for v in grid_vals[:5])
+    if "ema_fast" in params and "ema_slow" in params:
+        perturb = tuple({"ema_fast": f, "ema_slow": s} for f, s in EMA_PERTURB_PAIRS)
+    return StrategyTuning(
+        wf_variants=wf_variants,
+        param_grid_variants=param_grid,
+        perturb_variants=perturb,
+    )
 
 
 def variant_label(variant: dict) -> str:

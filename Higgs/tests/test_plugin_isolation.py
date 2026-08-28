@@ -13,6 +13,7 @@ import engine.strategies  # noqa: F401 — discover plugins
 from engine.indicators import add_indicators
 from engine.registry import (
     DEFAULT_PARAMS,
+    STRATEGY_REGISTRY,
     STRATEGY_SPECS,
     get_strategy,
     list_strategies,
@@ -52,7 +53,7 @@ def _ohlcv(n: int = 400) -> pd.DataFrame:
 
 class StrategyPluginTests(unittest.TestCase):
     def test_list_strategies_has_five(self):
-        self.assertEqual(list_strategies(), EXPECTED)
+        self.assertEqual(sorted(STRATEGY_REGISTRY.keys()), EXPECTED)
         for name in EXPECTED:
             self.assertTrue(STRATEGY_SPECS[name])
 
