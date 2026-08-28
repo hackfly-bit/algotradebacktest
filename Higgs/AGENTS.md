@@ -27,6 +27,6 @@ Taste-Skill + `docs/DESIGN.md`. Density 8–9. Ponytail: jangan over-build; jang
 
 ## Fase
 
-Fase 4 (strategy plugin + registry) selesai. Berikutnya Fase 5: backtester + metrics + parity notebook (`engine/backtester.py`, `engine/metrics.py`, `tests/test_engine_parity.py`).
+Fase 5 (backtester + metrics) selesai. Paritas penuh vs notebook membutuhkan `XAUUSD_2009_2026_M1.csv` (lihat Fase 2b). Berikutnya Fase 6: persistensi `BacktestRun` + `django.tasks` worker.
 
-**Backlog (tidak memblokir Fase 5):** [Fase 2b](docs/CONVERSION_PLAN.md#fase-2b--bootstrap-dataset-jika-csv-merged-tidak-ada) — jika `XAUUSD_2009_2026_M1.csv` tidak ada, unduh + merge dari HuggingFace `fokan/xauusd-2009-2026`.
+**Backlog:** [Fase 2b](docs/CONVERSION_PLAN.md#fase-2b--bootstrap-dataset-jika-csv-merged-tidak-ada) — bootstrap HuggingFace agar tes parity bisa hijau tanpa CSV lokal manual.
