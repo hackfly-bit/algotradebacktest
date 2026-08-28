@@ -59,7 +59,12 @@ def _write_csv(df: pd.DataFrame, path: Path, title_case: bool = True) -> None:
 
 class EngineDataTests(unittest.TestCase):
     def test_engine_modules_do_not_import_django(self):
-        for rel in ("engine/__init__.py", "engine/data.py", "engine/indicators.py"):
+        for rel in (
+            "engine/__init__.py",
+            "engine/data.py",
+            "engine/indicators.py",
+            "engine/registry.py",
+        ):
             tree = ast.parse((ENGINE_ROOT / rel).read_text(encoding="utf-8"))
             for node in ast.walk(tree):
                 names: list[str] = []
