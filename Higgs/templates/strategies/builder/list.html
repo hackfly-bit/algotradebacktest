@@ -10,6 +10,15 @@
     <a href="{% url 'strategies:builder_new' %}" class="btn-primary">+ Strategi baru</a>
   </div>
 
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    <label class="text-[12px] font-medium">Pemilik:</label>
+    <select name="owner" class="field-input !mt-0 w-auto text-[12px]" onchange="this.form.submit()">
+      <option value="mine" {% if owner_filter == "mine" %}selected{% endif %}>Milik saya</option>
+      <option value="all" {% if owner_filter == "all" %}selected{% endif %}>Semua</option>
+      <option value="others" {% if owner_filter == "others" %}selected{% endif %}>Orang lain</option>
+    </select>
+  </form>
+
   <section class="panel">
     <div class="panel-header">
       <h2 class="panel-title">Template gallery</h2>

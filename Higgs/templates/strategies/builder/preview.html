@@ -10,8 +10,12 @@
   <section class="panel">
     <div class="panel-header flex flex-wrap items-center justify-between gap-2">
       <div>
-        <h2 class="panel-title">Preview sinyal</h2>
-        <p class="panel-subtitle">80 entry terakhir · {{ strategy.slug }}</p>
+        <h2 class="panel-title">Preview OHLC + sinyal</h2>
+        <p class="panel-subtitle">
+          {{ strategy.slug }} ·
+          <span class="text-profit">{{ long_count }} long</span> ·
+          <span class="text-loss">{{ short_count }} short</span>
+        </p>
       </div>
       {% if datasets %}
       <form method="get" class="flex items-center gap-2">
@@ -24,23 +28,65 @@
       {% endif %}
     </div>
     <div class="panel-body">
-      <canvas id="signal-chart" height="140"></canvas>
+      <canvas id="signal-chart" height="160"></canvas>
       <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
       <script>
       (function(){
-        const pts = {{ points_json|safe }};
-        if (!pts.length) return;
-        const ctx = document.getElementById('signal-chart');
-        const labels = pts.map(p => p.ts.slice(0, 16));
-        const closes = pts.map(p => p.close);
-        const colors = pts.map(p => p.signal === 1 ? '#0F7A6C' : '#B42318');
-        new Chart(ctx, {
-          type: 'bar',
-          data: { labels, datasets: [
-            { type: 'line', label: 'Close', data: closes, borderColor: '#64748b', pointRadius: 0, tension: 0.1 },
-            { type: 'scatter', label: 'Signal', data: pts.map(p => ({x: p.ts.slice(0,16), y: p.close})), backgroundColor: colors, pointRadius: 4 }
-          ]},
-          options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
+        const equity = {{ equity_json|safe }};
+        const markers = {{ markers_json|safe }};
+        if (!equity.length) return;
+        const labels = equity.map(p => p.ts.slice(0, 16));
+        const closes = equity.map(p => p.close);
+        const longData = equity.map(p => {
+          const key = p.ts.slice(0, 16);
+          return markers.some(m => m.ts.slice(0, 16) === key && m.signal === 1) ? p.close : null;
+        });
+        const shortData = equity.map(p => {
+          const key = p.ts.slice(0, 16);
+          return markers.some(m => m.ts.slice(0, 16) === key && m.signal === -1) ? p.close : null;
+        });
+        new Chart(document.getElementById('signal-chart'), {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Close',
+                data: closes,
+                borderColor: '#64748b',
+                borderWidth: 1.2,
+                pointRadius: 0,
+                tension: 0.05,
+                fill: false,
+              },
+              {
+                label: 'Long',
+                data: longData,
+                borderColor: 'transparent',
+                backgroundColor: '#1B7F4E',
+                pointRadius: 5,
+                pointStyle: 'triangle',
+                showLine: false,
+              },
+              {
+                label: 'Short',
+                data: shortData,
+                borderColor: 'transparent',
+                backgroundColor: '#B42318',
+                pointRadius: 5,
+                pointStyle: 'rectRot',
+                showLine: false,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 11 } } } },
+            scales: {
+              x: { display: false },
+              y: { ticks: { font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+            },
+          },
         });
       })();
       </script>

@@ -2,7 +2,7 @@
 
 Aplikasi web lokal untuk backtest rules-based XAUUSD, di-port dari [`XAUUSD_Momentum_Pipeline.ipynb`](../XAUUSD_Momentum_Pipeline.ipynb). Bukan sistem ML — hanya aturan teknikal, next-bar execution, dan pipeline validasi seperti notebook.
 
-Stack: **Django 6.1** · **SQLite** · **Tailwind v4** · **HTMX** · **Chart.js**
+Stack: **Django 6.1** · **SQLite** · **Tailwind v4** · **HTMX 4.0** · **Chart.js**
 
 ---
 
@@ -118,10 +118,11 @@ Klik nama strategi → parameter default + docstring (`logic_spec`).
 Buat strategi **tanpa coding Python**:
 
 1. **Builder** → pilih template (breakout, EMA/RSI, gemini, claude, kimi)
-2. Edit definisi JSON v1 (rules, params, exit SL/TP)
-3. Set status **active** → muncul di form Run baru dan screening `*`
-4. **Preview** sinyal + **Quick test** mini backtest
-5. **Export/Import JSON** untuk share antar install
+2. Edit lewat **Visual rule editor** (tambah kondisi, preset blocks, panel parameter) — tab JSON opsional
+3. **Cek schema** live + preview logic_spec
+4. Set status **active** → muncul di form Run baru dan screening `*`
+5. **Preview OHLC** + marker long/short + **Quick test** mini backtest
+6. **Export/Import JSON**, duplikat, **versi baru** (fork), filter milik saya/semua
 
 Custom slug: `custom_<nama>` (contoh `custom_my_breakout`).
 
@@ -252,7 +253,7 @@ set PYTHONPATH=.
 python -m pytest tests\ -q
 ```
 
-Harus **69 passed** (parity notebook, rule interpreter, builder UI, walk-forward, gate, deep pipeline).
+Harus **71 passed** (parity notebook, rule interpreter, visual builder UI, walk-forward, gate, deep pipeline).
 
 Parity penuh membutuhkan dataset bootstrap + ingest terlebih dahulu.
 
