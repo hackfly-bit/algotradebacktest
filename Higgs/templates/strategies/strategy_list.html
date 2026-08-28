@@ -5,7 +5,7 @@
   <div class="flex flex-wrap items-end justify-between gap-2">
     <div>
       <p class="breadcrumb"><a href="{% url 'core:overview' %}">Ringkasan</a> / Strategi</p>
-      <p class="mt-1 text-[12px] text-ink/60 dark:text-ink-dark/55">{{ strategies|length }} plugin terdaftar · copot-pasang via registry</p>
+      <p class="mt-1 text-[12px] text-ink/60 dark:text-ink-dark/55">Plugin built-in + custom · <a href="{% url 'strategies:builder_list' %}" class="text-accent">Builder</a></p>
     </div>
     <a href="{% url 'backtests:run_new' %}" class="btn-primary">Screening run</a>
   </div>
@@ -20,7 +20,7 @@
             <a class="hover:text-accent dark:hover:text-accent-dark" href="{% url 'strategies:strategy_detail' row.name %}">{{ row.name }}</a>
           </h2>
           <p class="mt-1 flex flex-wrap gap-1">
-            {% if row.allow_short %}<span class="badge badge-accent">L/S</span>{% else %}<span class="badge badge-neutral">Long only</span>{% endif %}
+            {% if row.is_custom %}<span class="badge badge-accent">Custom</span>{% elif row.allow_short %}<span class="badge badge-accent">L/S</span>{% else %}<span class="badge badge-neutral">Long only</span>{% endif %}
             {% if row.uses_volume %}<span class="badge badge-neutral">Volume</span>{% endif %}
           </p>
         </div>
@@ -53,7 +53,7 @@
             <td class="whitespace-nowrap font-mono text-[12px]">
               <a class="text-accent hover:underline dark:text-accent-dark" href="{% url 'strategies:strategy_detail' row.name %}">{{ row.name }}</a>
             </td>
-            <td>{% if row.allow_short %}<span class="badge badge-accent">Long/Short</span>{% else %}<span class="badge badge-neutral">Long</span>{% endif %}</td>
+            <td>{% if row.is_custom %}<span class="badge badge-accent">Custom</span>{% elif row.allow_short %}<span class="badge badge-accent">L/S</span>{% else %}<span class="badge badge-neutral">Long</span>{% endif %}</td>
             <td class="max-w-xl text-[12px] text-ink/75 dark:text-ink-dark/70">{{ row.spec_preview }}</td>
           </tr>
           {% endfor %}

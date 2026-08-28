@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from engine.registry import STRATEGY_SPECS
+from engine.registry import get_strategy_spec
 
 
 def fmt_pct(x: float) -> str:
@@ -56,7 +56,7 @@ def build_mql5_spec(ctx: Mql5SpecContext) -> str:
         if (ctx.volume_usable and p.get("use_volume_filter", True))
         else "DISABLED (volume data dead / unused)"
     )
-    logic = STRATEGY_SPECS.get(ctx.strategy_name, "")
+    logic = get_strategy_spec(ctx.strategy_name)
     boot = ctx.mc.get("bootstrap", {})
     rec_risk = ctx.risk_pct
     hard_dd = abs(

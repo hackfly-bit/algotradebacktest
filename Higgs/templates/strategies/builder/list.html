@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mx-auto flex max-w-[1400px] flex-col gap-3">
+  <div class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <p class="breadcrumb"><a href="{% url 'strategies:strategy_list' %}">Strategi</a> / Builder</p>
+      <p class="mt-1 text-[12px] text-ink/60">{{ strategies|length }} custom · {{ template_count }} template built-in</p>
+    </div>
+    <a href="{% url 'strategies:builder_new' %}" class="btn-primary">+ Strategi baru</a>
+  </div>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Template gallery</h2>
+      <p class="panel-subtitle">Mulai dari strategi built-in</p>
+    </div>
+    <div class="panel-body flex flex-wrap gap-2">
+      <a href="{% url 'strategies:builder_new' %}?template=breakout_atr" class="btn-ghost-sm">Breakout ATR</a>
+      <a href="{% url 'strategies:builder_new' %}?template=ema_rsi_volume" class="btn-ghost-sm">EMA RSI Volume</a>
+      <a href="{% url 'strategies:builder_new' %}?template=trend_breakout_by_gemini" class="btn-ghost-sm">Gemini Breakout</a>
+      <a href="{% url 'strategies:builder_new' %}?template=trend_pullback_by_claude" class="btn-ghost-sm">Claude Pullback</a>
+      <a href="{% url 'strategies:builder_new' %}?template=momentum_squeeze_by_kimi" class="btn-ghost-sm">Kimi Squeeze</a>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header"><h2 class="panel-title">Strategi custom</h2></div>
+    <div class="panel-body-flush overflow-x-auto">
+      {% if strategies %}
+      <table class="data-table data-table-compact">
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Slug</th>
+            <th>Status</th>
+            <th>Short</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in strategies %}
+          <tr>
+            <td class="font-medium text-[12px]">{{ s.label }}</td>
+            <td class="font-mono text-[12px]">{{ s.slug }}</td>
+            <td><span class="badge {% if s.status == 'active' %}badge-profit{% elif s.status == 'draft' %}badge-warn{% else %}badge-neutral{% endif %}">{{ s.status }}</span></td>
+            <td>{% if s.allow_short %}L/S{% else %}Long{% endif %}</td>
+            <td class="font-mono text-[11px] text-ink/60">{{ s.updated_at|date:"Y-m-d H:i" }}</td>
+            <td class="space-x-1 whitespace-nowrap">
+              <a class="btn-ghost-sm" href="{% url 'strategies:builder_edit' s.pk %}">Edit</a>
+              <a class="btn-ghost-sm" href="{% url 'strategies:builder_preview' s.pk %}">Preview</a>
+              <a class="btn-ghost-sm" href="{% url 'strategies:builder_export' s.pk %}">Export</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="panel-body">
+        <div class="empty-state">
+          <p class="text-sm">Belum ada strategi custom.</p>
+          <a href="{% url 'strategies:builder_new' %}" class="btn-primary mt-2">Buat dari template</a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

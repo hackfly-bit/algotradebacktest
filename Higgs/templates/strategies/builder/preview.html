@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mx-auto flex max-w-[1000px] flex-col gap-3">
+  <p class="breadcrumb"><a href="{% url 'strategies:builder_list' %}">Builder</a> / Preview / {{ strategy.label }}</p>
+
+  {% if error %}
+  <div class="panel"><div class="panel-body text-loss">{{ error }}</div></div>
+  {% else %}
+  <section class="panel">
+    <div class="panel-header flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h2 class="panel-title">Preview sinyal</h2>
+        <p class="panel-subtitle">80 entry terakhir · {{ strategy.slug }}</p>
+      </div>
+      {% if datasets %}
+      <form method="get" class="flex items-center gap-2">
+        <select name="dataset" class="field-input !mt-0 text-[12px]" onchange="this.form.submit()">
+          {% for ds in datasets %}
+          <option value="{{ ds.pk }}" {% if selected_dataset == ds.pk|stringformat:'s' %}selected{% endif %}>{{ ds.source_name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      {% endif %}
+    </div>
+    <div class="panel-body">
+      <canvas id="signal-chart" height="140"></canvas>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+      <script>
+      (function(){
+        const pts = {{ points_json|safe }};
+        if (!pts.length) return;
+        const ctx = document.getElementById('signal-chart');
+        const labels = pts.map(p => p.ts.slice(0, 16));
+        const closes = pts.map(p => p.close);
+        const colors = pts.map(p => p.signal === 1 ? '#0F7A6C' : '#B42318');
+        new Chart(ctx, {
+          type: 'bar',
+          data: { labels, datasets: [
+            { type: 'line', label: 'Close', data: closes, borderColor: '#64748b', pointRadius: 0, tension: 0.1 },
+            { type: 'scatter', label: 'Signal', data: pts.map(p => ({x: p.ts.slice(0,16), y: p.close})), backgroundColor: colors, pointRadius: 4 }
+          ]},
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
+        });
+      })();
+      </script>
+    </div>
+  </section>
+  {% endif %}
+  {% if strategy %}<a href="{% url 'strategies:builder_edit' strategy.pk %}" class="btn-ghost-sm w-fit">Kembali ke editor</a>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,154 @@
+{
+  "breakout_atr": {
+    "schema_version": 1,
+    "label": "Breakout ATR",
+    "allow_short": false,
+    "params": {
+      "lookback": {"type": "int", "default": 24, "min": 5, "max": 100, "optimizable": true},
+      "atr_sl": {"type": "float", "default": 1.5, "optimizable": false},
+      "atr_tp": {"type": "float", "default": 3.0, "optimizable": false}
+    },
+    "long": {
+      "combine": "and",
+      "conditions": [
+        {
+          "op": "gt",
+          "left": {"col": "Close"},
+          "right": {"fn": "rolling_max", "col": "High", "period": "$lookback", "shift": 1}
+        }
+      ]
+    },
+    "short": null,
+    "exit": {"sl_atr": "$atr_sl", "tp_atr": "$atr_tp"}
+  },
+  "ema_rsi_volume": {
+    "schema_version": 1,
+    "label": "EMA RSI Volume",
+    "allow_short": false,
+    "params": {
+      "ema_fast": {"type": "int", "default": 20, "min": 5, "max": 100, "optimizable": true},
+      "ema_slow": {"type": "int", "default": 50, "min": 10, "max": 200, "optimizable": true},
+      "rsi_threshold": {"type": "float", "default": 50, "optimizable": false},
+      "volume_ma": {"type": "int", "default": 20, "optimizable": false},
+      "use_volume_filter": {"type": "bool", "default": true, "optimizable": false},
+      "atr_sl": {"type": "float", "default": 1.5, "optimizable": false},
+      "atr_tp": {"type": "float", "default": 3.0, "optimizable": false}
+    },
+    "long": {
+      "combine": "and",
+      "conditions": [
+        {"op": "gt", "left": {"fn": "ema", "period": "$ema_fast"}, "right": {"fn": "ema", "period": "$ema_slow"}},
+        {"op": "gt", "left": {"col": "rsi_14"}, "right": "$rsi_threshold"},
+        {"op": "volume_filter"}
+      ]
+    },
+    "short": null,
+    "exit": {"sl_atr": "$atr_sl", "tp_atr": "$atr_tp"}
+  },
+  "trend_breakout_by_gemini": {
+    "schema_version": 1,
+    "label": "Trend Breakout Gemini",
+    "allow_short": true,
+    "params": {
+      "ema_fast": {"type": "int", "default": 20, "optimizable": true},
+      "ema_slow": {"type": "int", "default": 50, "optimizable": true},
+      "ema_trend": {"type": "int", "default": 200, "optimizable": false},
+      "lookback": {"type": "int", "default": 24, "optimizable": true},
+      "adx_th": {"type": "float", "default": 20.0, "optimizable": false},
+      "rsi_th": {"type": "float", "default": 50.0, "optimizable": false},
+      "atr_sl": {"type": "float", "default": 2.0, "optimizable": false},
+      "atr_tp": {"type": "float", "default": 4.0, "optimizable": false}
+    },
+    "long": {
+      "combine": "and",
+      "conditions": [
+        {"op": "gt", "left": {"col": "Close"}, "right": {"fn": "rolling_max", "col": "High", "period": "$lookback", "shift": 1}},
+        {"op": "gt", "left": {"col": "Close"}, "right": {"fn": "ema", "period": "$ema_trend"}},
+        {"op": "gt", "left": {"fn": "ema", "period": "$ema_fast"}, "right": {"fn": "ema", "period": "$ema_slow"}},
+        {"op": "gt", "left": {"col": "adx_14"}, "right": "$adx_th"},
+        {"op": "gt", "left": {"col": "rsi_14"}, "right": "$rsi_th"}
+      ]
+    },
+    "short": {
+      "combine": "and",
+      "conditions": [
+        {"op": "lt", "left": {"col": "Close"}, "right": {"fn": "rolling_min", "col": "Low", "period": "$lookback", "shift": 1}},
+        {"op": "lt", "left": {"col": "Close"}, "right": {"fn": "ema", "period": "$ema_trend"}},
+        {"op": "lt", "left": {"fn": "ema", "period": "$ema_fast"}, "right": {"fn": "ema", "period": "$ema_slow"}},
+        {"op": "gt", "left": {"col": "adx_14"}, "right": "$adx_th"},
+        {"op": "lt", "left": {"col": "rsi_14"}, "right": {"fn": "subtract", "left": {"fn": "literal", "value": 100}, "right": "$rsi_th"}}
+      ]
+    },
+    "exit": {"sl_atr": "$atr_sl", "tp_atr": "$atr_tp"}
+  },
+  "trend_pullback_by_claude": {
+    "schema_version": 1,
+    "label": "Trend Pullback Claude",
+    "allow_short": false,
+    "params": {
+      "ema_fast": {"type": "int", "default": 20, "optimizable": true},
+      "ema_slow": {"type": "int", "default": 50, "optimizable": true},
+      "adx_min": {"type": "float", "default": 20.0, "optimizable": false},
+      "pull_bars": {"type": "int", "default": 3, "optimizable": false},
+      "slope_bars": {"type": "int", "default": 5, "optimizable": false},
+      "atr_sl": {"type": "float", "default": 2.0, "optimizable": false},
+      "atr_tp": {"type": "float", "default": 4.0, "optimizable": false}
+    },
+    "long": {
+      "combine": "and",
+      "conditions": [
+        {"op": "gt", "left": {"col": "Close"}, "right": {"fn": "ema", "period": 200}},
+        {"op": "gt", "left": {"fn": "ema", "period": 200}, "right": {"fn": "shift", "ref": {"fn": "ema", "period": 200}, "bars": "$slope_bars"}},
+        {"op": "gt", "left": {"col": "adx_14"}, "right": "$adx_min"},
+        {"op": "gt", "left": {"fn": "ema", "period": "$ema_fast"}, "right": {"fn": "ema", "period": "$ema_slow"}},
+        {"op": "touch_in_last_n", "col": "Low", "ref": {"fn": "ema", "period": "$ema_fast"}, "bars": "$pull_bars"},
+        {"op": "gt", "left": {"col": "Close"}, "right": {"fn": "ema", "period": "$ema_fast"}},
+        {"op": "gt", "left": {"col": "rsi_14"}, "right": {"fn": "literal", "value": 50}}
+      ]
+    },
+    "short": null,
+    "exit": {"sl_atr": "$atr_sl", "tp_atr": "$atr_tp"}
+  },
+  "momentum_squeeze_by_kimi": {
+    "schema_version": 1,
+    "label": "Momentum Squeeze Kimi",
+    "allow_short": true,
+    "params": {
+      "ema_fast": {"type": "int", "default": 20, "optimizable": true},
+      "ema_slow": {"type": "int", "default": 50, "optimizable": true},
+      "ema_trend": {"type": "int", "default": 200, "optimizable": false},
+      "lookback": {"type": "int", "default": 20, "optimizable": true},
+      "adx_th": {"type": "float", "default": 20.0, "optimizable": false},
+      "adx_rise": {"type": "int", "default": 3, "optimizable": false},
+      "rsi_long": {"type": "float", "default": 52.0, "optimizable": false},
+      "rsi_short": {"type": "float", "default": 48.0, "optimizable": false},
+      "atr_sl": {"type": "float", "default": 2.0, "optimizable": false},
+      "atr_tp": {"type": "float", "default": 4.5, "optimizable": false}
+    },
+    "long": {
+      "combine": "and",
+      "conditions": [
+        {"op": "gt", "left": {"col": "Close"}, "right": {"fn": "ema", "period": "$ema_trend"}},
+        {"op": "gt", "left": {"fn": "ema", "period": "$ema_fast"}, "right": {"fn": "ema", "period": "$ema_slow"}},
+        {"op": "gt", "left": {"col": "adx_14"}, "right": "$adx_th"},
+        {"op": "rising", "ref": {"col": "adx_14"}, "bars": "$adx_rise"},
+        {"op": "squeeze", "lookback": "$lookback", "median_bars": 100},
+        {"op": "gt", "left": {"col": "Close"}, "right": {"fn": "rolling_max", "col": "High", "period": "$lookback", "shift": 1}},
+        {"op": "gt", "left": {"col": "rsi_14"}, "right": "$rsi_long"}
+      ]
+    },
+    "short": {
+      "combine": "and",
+      "conditions": [
+        {"op": "lt", "left": {"col": "Close"}, "right": {"fn": "ema", "period": "$ema_trend"}},
+        {"op": "lt", "left": {"fn": "ema", "period": "$ema_fast"}, "right": {"fn": "ema", "period": "$ema_slow"}},
+        {"op": "gt", "left": {"col": "adx_14"}, "right": "$adx_th"},
+        {"op": "rising", "ref": {"col": "adx_14"}, "bars": "$adx_rise"},
+        {"op": "squeeze", "lookback": "$lookback", "median_bars": 100},
+        {"op": "lt", "left": {"col": "Close"}, "right": {"fn": "rolling_min", "col": "Low", "period": "$lookback", "shift": 1}},
+        {"op": "lt", "left": {"col": "rsi_14"}, "right": "$rsi_short"}
+      ]
+    },
+    "exit": {"sl_atr": "$atr_sl", "tp_atr": "$atr_tp"}
+  }
+}

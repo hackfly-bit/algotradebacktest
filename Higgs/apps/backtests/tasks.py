@@ -387,6 +387,9 @@ def _run_deep_pipeline(
 
 
 def execute_run(run_id: int) -> None:
+    from apps.strategies.registry_bridge import sync_custom_strategies
+
+    sync_custom_strategies()
     run = BacktestRun.objects.select_related("dataset").get(pk=run_id)
     if run.strategy_name in {"*", "all"}:
         return
