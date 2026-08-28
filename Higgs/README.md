@@ -2,7 +2,7 @@
 
 Aplikasi web lokal untuk backtest rules-based XAUUSD, di-port dari [`XAUUSD_Momentum_Pipeline.ipynb`](../XAUUSD_Momentum_Pipeline.ipynb). Bukan sistem ML — hanya aturan teknikal, next-bar execution, dan pipeline validasi seperti notebook.
 
-Stack: **Django 6.1** · **SQLite** · **Tailwind v4** · **HTMX** · **Chart.js**
+Stack: **Django 6.1** · **SQLite** · **Tailwind v4** · **HTMX 4.0** · **Chart.js**
 
 ---
 
