@@ -92,6 +92,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 TASKS = {
     "default": {
+        # Django 6.1 ships ImmediateBackend + DummyBackend only (no DatabaseBackend yet).
         "BACKEND": "django.tasks.backends.immediate.ImmediateBackend",
     }
 }
