@@ -90,6 +90,8 @@ LOGOUT_REDIRECT_URL = "login"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+BACKTEST_RUN_ASYNC = True
+
 TASKS = {
     "default": {
         # Django 6.1 ships ImmediateBackend + DummyBackend only (no DatabaseBackend yet).

@@ -23,6 +23,13 @@
           <option value="failed" {% if status_filter == "failed" %}selected{% endif %}>failed</option>
         </select>
         <input type="text" name="strategy" value="{{ strategy_filter }}" placeholder="strategi" class="field-input !mt-0 w-40 text-[12px]">
+        <select name="gate" class="field-input !mt-0 w-auto text-[12px]">
+          <option value="">Semua gate</option>
+          <option value="ROBUST" {% if gate_filter == "ROBUST" %}selected{% endif %}>ROBUST</option>
+          <option value="ACCEPTABLE" {% if gate_filter == "ACCEPTABLE" %}selected{% endif %}>ACCEPTABLE</option>
+          <option value="FRAGILE" {% if gate_filter == "FRAGILE" %}selected{% endif %}>FRAGILE</option>
+          <option value="FAIL" {% if gate_filter == "FAIL" %}selected{% endif %}>FAIL</option>
+        </select>
         <button type="submit" class="btn-ghost-sm">Terapkan</button>
       </form>
     </div>
@@ -38,6 +45,7 @@
             <th class="text-right">Equity</th>
             <th class="text-right">Sharpe</th>
             <th class="text-right">Trades</th>
+            <th>Gate</th>
             <th>Dibuat</th>
           </tr>
         </thead>
@@ -56,6 +64,11 @@
             <td class="text-right font-mono text-[12px]">{% if row.metric %}{{ row.metric.final_equity|floatformat:0 }}{% else %}—{% endif %}</td>
             <td class="text-right font-mono text-[12px]">{% if row.metric %}{{ row.metric.sharpe|floatformat:3 }}{% else %}—{% endif %}</td>
             <td class="text-right font-mono text-[12px]">{% if row.metric %}{{ row.metric.trades }}{% else %}—{% endif %}</td>
+            <td>
+              {% if row.run.decision_gate %}
+              <span class="badge {% if row.run.decision_gate.status == 'ROBUST' %}badge-profit{% elif row.run.decision_gate.status == 'ACCEPTABLE' %}badge-warn{% elif row.run.decision_gate.status == 'FAIL' %}badge-loss{% else %}badge-neutral{% endif %}">{{ row.run.decision_gate.status }}</span>
+              {% else %}—{% endif %}
+            </td>
             <td class="font-mono text-[11px] text-ink/60">{{ row.run.created_at|date:"Y-m-d H:i" }}</td>
           </tr>
           {% endfor %}

@@ -9,9 +9,8 @@ import pandas as pd
 
 from engine.backtester import apply_strategy, run_backtest
 from engine.data import slice_df
+from engine.tuning import get_strategy_tuning, param_stable_threshold, variant_label
 
-EMA_FAST_GRID = (10, 15, 20, 25, 30)
-PERTURB_PAIRS = ((18, 48), (19, 49), (20, 50), (21, 51), (22, 52))
 COST_MULTIPLIERS = (1, 2, 3)
 
 
@@ -96,6 +95,7 @@ def run_robustness(
     risk_pct: float = 0.01,
     contract_size: float = 100.0,
 ) -> RobustnessResult:
+    tuning = get_strategy_tuning(strategy_name)
     run_kwargs = {
         "initial_equity": initial_equity,
         "fee": fee,
@@ -108,33 +108,36 @@ def run_robustness(
 
     grid_rows: list[RobustnessRowResult] = []
     sharpes: list[float] = []
-    for fast in EMA_FAST_GRID:
-        p = {**base_params, "ema_fast": fast}
+    for variant in tuning.param_grid_variants:
+        p = {**base_params, **variant}
+        label = variant_label(variant)
         r = _backtest_slice(
             df_ind,
             strategy_name,
             p,
             end=in_sample_end,
-            name=f"ema_fast_{fast}",
+            name=label,
             **run_kwargs,
         )
-        grid_rows.append(_row_from_result("param_grid", f"ema_fast_{fast}", r, extras={"ema_fast": fast}))
+        grid_rows.append(_row_from_result("param_grid", label, r, extras=dict(variant)))
         sharpes.append(float(r.metrics.get("sharpe") or 0.0))
     arr = np.asarray(sharpes, dtype=float)
-    param_stable = bool(np.isfinite(arr).all() and (arr > 0).sum() >= 4)
+    need = param_stable_threshold(len(sharpes))
+    param_stable = bool(len(sharpes) and np.isfinite(arr).all() and (arr > 0).sum() >= need)
 
     perturb_rows: list[RobustnessRowResult] = []
-    for fast, slow in PERTURB_PAIRS:
-        p = {**base_params, "ema_fast": fast, "ema_slow": slow}
+    for variant in tuning.perturb_variants:
+        p = {**base_params, **variant}
+        label = variant_label(variant)
         r = _backtest_slice(
             df_ind,
             strategy_name,
             p,
             start=oos_start,
-            name=f"{fast}/{slow}",
+            name=label,
             **run_kwargs,
         )
-        perturb_rows.append(_row_from_result("ema_perturb", f"{fast}/{slow}", r))
+        perturb_rows.append(_row_from_result("ema_perturb", label, r, extras=dict(variant)))
 
     perturb_stable = bool(perturb_rows and all(row.oos_return > 0 for row in perturb_rows))
 

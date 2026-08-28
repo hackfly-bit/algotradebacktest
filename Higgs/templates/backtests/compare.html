@@ -41,6 +41,7 @@
             <th class="text-right">OOS Return</th>
             <th class="text-right">OOS DD</th>
             <th class="text-right">OOS Trades</th>
+            <th>Gate</th>
           </tr>
         </thead>
         <tbody>
@@ -55,6 +56,7 @@
             <td class="text-right font-mono text-[12px]">{% if row.oos_return != None %}{{ row.oos_return|pct }}{% else %}—{% endif %}</td>
             <td class="text-right font-mono text-[12px]">{% if row.oos_dd != None %}{{ row.oos_dd|pct }}{% else %}—{% endif %}</td>
             <td class="text-right font-mono text-[12px]">{{ row.oos_trades|default:"—" }}</td>
+            <td>{% if row.gate_status %}<span class="badge {% if row.gate_status == 'ROBUST' %}badge-profit{% elif row.gate_status == 'ACCEPTABLE' %}badge-warn{% elif row.gate_status == 'FAIL' %}badge-loss{% else %}badge-neutral{% endif %}">{{ row.gate_status }}</span>{% else %}—{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>

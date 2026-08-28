@@ -1,9 +1,12 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 import engine.strategies  # noqa: F401
 from apps.backtests.models import BacktestRun, MetricSet
+from apps.core.forms import BacktestSettingsForm
+from apps.core.models import BacktestSettings
 from apps.marketdata.models import Dataset
 from engine.registry import list_strategies
 
@@ -14,11 +17,17 @@ def overview(request):
     status_counts = runs.values("status").annotate(n=Count("id"))
     by_status = {row["status"]: row["n"] for row in status_counts}
 
+    recent_runs = runs.select_related("dataset").order_by("-created_at")[:8]
+    run_ids = [run.pk for run in recent_runs]
+    metrics = {
+        m.run_id: m
+        for m in MetricSet.objects.filter(run_id__in=run_ids, split="full").only(
+            "run_id", "final_equity", "sharpe", "trades"
+        )
+    }
     recent = []
-    for run in runs.select_related("dataset").order_by("-created_at")[:8]:
-        metric = MetricSet.objects.filter(run=run, split="full").only(
-            "final_equity", "sharpe", "trades"
-        ).first()
+    for run in recent_runs:
+        metric = metrics.get(run.pk)
         recent.append(
             {
                 "id": run.pk,
@@ -51,11 +60,18 @@ def overview(request):
 
 @login_required
 def app_settings(request):
+    cfg = BacktestSettings.load()
+    form = BacktestSettingsForm(request.POST or None, instance=cfg)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Default backtest disimpan.")
+        return redirect("core:settings")
     return render(
         request,
-        "partials/placeholder.html",
+        "core/settings.html",
         {
             "page_title": "Pengaturan",
-            "placeholder_note": "Default fee, spread, slippage, dan risiko belum diikat ke form. Fase berikutnya.",
+            "form": form,
+            "async_jobs": True,
         },
     )

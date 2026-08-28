@@ -8,8 +8,7 @@ import pandas as pd
 
 from engine.backtester import apply_strategy, run_backtest
 from engine.data import slice_df
-
-EMA_FAST_GRID = (15, 20, 25)
+from engine.tuning import get_strategy_tuning
 
 
 def walk_forward_windows(
@@ -109,6 +108,13 @@ def _backtest_window(
     )
 
 
+def _primary_tuned_int(params: dict) -> int:
+    for key in ("ema_fast", "lookback"):
+        if key in params:
+            return int(params[key])
+    return 0
+
+
 def run_walk_forward(
     df_ind: pd.DataFrame,
     strategy_name: str,
@@ -126,12 +132,12 @@ def run_walk_forward(
     train_years: int = 3,
     test_years: int = 1,
     step_years: int = 1,
-    ema_fast_grid: tuple[int, ...] = EMA_FAST_GRID,
 ) -> tuple[list[WalkForwardFoldResult], bool, dict]:
     ts = pd.to_datetime(df_ind["Datetime"])
     start = wf_start or str(ts.min().date())
     end = wf_end or str(ts.max().date())
     windows = walk_forward_windows(start, end, train_years, test_years, step_years)
+    tuning = get_strategy_tuning(strategy_name)
 
     run_kwargs = {
         "initial_equity": initial_equity,
@@ -146,8 +152,8 @@ def run_walk_forward(
     folds: list[WalkForwardFoldResult] = []
     for dev_s, dev_e, val_s, val_e in windows:
         best: tuple[float, dict, dict] | None = None
-        for fast in ema_fast_grid:
-            p = {**base_params, "ema_fast": fast}
+        for variant in tuning.wf_variants:
+            p = {**base_params, **variant}
             dev = _backtest_window(
                 df_ind,
                 strategy_name,
@@ -180,7 +186,7 @@ def run_walk_forward(
                 dev_end=dev_e,
                 val_start=val_s,
                 val_end=val_e,
-                chosen_ema_fast=int(best[1]["ema_fast"]),
+                chosen_ema_fast=_primary_tuned_int(best[1]),
                 dev_sharpe=float(best[0]),
                 val_sharpe=val_sharpe,
                 val_return=float(val.metrics.get("total_return") or 0.0),

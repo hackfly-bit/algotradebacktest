@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -32,6 +33,8 @@ from engine.mql5_export import Mql5SpecContext, build_mql5_spec, export_mql5_spe
 from engine.registry import resolve_strategy_queue
 from engine.robustness import run_robustness
 from engine.walk_forward import run_walk_forward
+
+logger = logging.getLogger(__name__)
 
 METRIC_FIELDS = {
     "final_equity",
@@ -306,7 +309,8 @@ def _run_deep_pipeline(
     is_result,
     oos_result,
     full_result,
-) -> None:
+) -> tuple[str, str]:
+    """Persist deep analysis to DB; return (spec_text, gate_status) for file export."""
     run_kwargs = {
         "initial_equity": run.initial_equity,
         "fee": run.fee,
@@ -379,16 +383,7 @@ def _run_deep_pipeline(
         cost_pass=rob.cost_pass,
     )
     spec_text = build_mql5_spec(ctx)
-    export_dir = Path(settings.MEDIA_ROOT) / "exports"
-    md_path, txt_path = export_mql5_spec(
-        spec_text,
-        gate.status,
-        export_dir,
-        run.dataset.symbol,
-        run.dataset.timeframe,
-        strategy_name,
-    )
-    _persist_exports(run, md_path, txt_path)
+    return spec_text, gate.status
 
 
 def execute_run(run_id: int) -> None:
@@ -400,7 +395,10 @@ def execute_run(run_id: int) -> None:
     run.started_at = dj_tz.now()
     run.error_message = ""
     run.save(update_fields=["status", "started_at", "error_message"])
+    if run.parent_id:
+        _refresh_parent_status(run.parent_id)
 
+    export_job: tuple[str, str] | None = None
     try:
         df = add_indicators(pd.read_parquet(run.dataset.cache_path))
         params = dict(run.params or {})
@@ -423,7 +421,7 @@ def execute_run(run_id: int) -> None:
             _persist_result(run, is_result, split="is")
             _persist_result(run, oos_result, split="oos")
             if run.multi_deep:
-                _run_deep_pipeline(
+                export_job = _run_deep_pipeline(
                     run,
                     df,
                     strategy_name,
@@ -438,16 +436,29 @@ def execute_run(run_id: int) -> None:
             run.finished_at = dj_tz.now()
             run.save(update_fields=["status", "finished_at"])
 
+        if export_job:
+            spec_text, gate_status = export_job
+            export_dir = Path(settings.MEDIA_ROOT) / "exports"
+            md_path, txt_path = export_mql5_spec(
+                spec_text,
+                gate_status,
+                export_dir,
+                run.dataset.symbol,
+                run.dataset.timeframe,
+                strategy_name,
+            )
+            _persist_exports(run, md_path, txt_path)
+
         if run.parent_id:
             _refresh_parent_status(run.parent_id)
     except Exception as exc:  # noqa: BLE001
+        logger.exception("Backtest run %s failed", run_id)
         run.status = BacktestRun.Status.FAILED
         run.error_message = str(exc)
         run.finished_at = dj_tz.now()
         run.save(update_fields=["status", "error_message", "finished_at"])
         if run.parent_id:
             _refresh_parent_status(run.parent_id)
-        raise
 
 
 def _refresh_parent_status(parent_id: int) -> None:
@@ -461,6 +472,8 @@ def _refresh_parent_status(parent_id: int) -> None:
     elif all(c.status == BacktestRun.Status.DONE for c in children):
         parent.status = BacktestRun.Status.DONE
     elif any(c.status == BacktestRun.Status.RUNNING for c in children):
+        parent.status = BacktestRun.Status.RUNNING
+    elif any(c.status == BacktestRun.Status.DONE for c in children):
         parent.status = BacktestRun.Status.RUNNING
     else:
         parent.status = BacktestRun.Status.QUEUED
