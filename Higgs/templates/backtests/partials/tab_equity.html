@@ -1,0 +1,53 @@
+<section class="panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Equity curve</h2>
+    <p class="panel-subtitle">Full sample · downsampled</p>
+  </div>
+  <div class="panel-body">
+    {% if equity_json != "[]" %}
+    <canvas id="equity-chart" height="120"></canvas>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script>
+      (function () {
+        const data = {{ equity_json|safe }};
+        const ctx = document.getElementById("equity-chart");
+        if (!ctx || !data.length) return;
+        const labels = data.map((p) => p.ts.slice(0, 10));
+        const values = data.map((p) => p.equity);
+        new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [{
+              label: "Equity",
+              data: values,
+              borderColor: "#0F7A6C",
+              backgroundColor: "rgba(15,122,108,0.08)",
+              borderWidth: 1.2,
+              pointRadius: 0,
+              tension: 0.15,
+              fill: true,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { display: false },
+              y: {
+                ticks: { font: { family: "IBM Plex Mono" }, maxTicksLimit: 6 },
+                grid: { color: "rgba(0,0,0,0.06)" },
+              },
+            },
+          },
+        });
+      })();
+    </script>
+    {% else %}
+    <div class="empty-state">
+      <p class="text-sm">Kurva equity belum tersedia.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>

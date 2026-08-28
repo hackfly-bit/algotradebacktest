@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load backtest_extras %}
+
+{% block content %}
+<div class="mx-auto flex max-w-[1400px] flex-col gap-3">
+  <p class="breadcrumb"><a href="{% url 'backtests:run_list' %}">Run</a> / Screening #{{ parent.pk }}</p>
+
+  <div class="flex flex-wrap items-center gap-2">
+    {% if parent.status == "done" %}<span class="badge badge-profit">done</span>
+    {% elif parent.status == "running" %}<span class="badge badge-warn">running</span>
+    {% else %}<span class="badge badge-neutral">{{ parent.status }}</span>{% endif %}
+    <span class="text-[12px] text-ink/60">5 strategi · {{ parent.dataset.source_name }}</span>
+    <div
+      hx-get="{% url 'backtests:run_status' parent.pk %}"
+      hx-trigger="{% if parent.status != 'done' and parent.status != 'failed' %}load, every 2s{% else %}none{% endif %}"
+      hx-swap="innerHTML"
+      class="ml-auto"
+    >
+      <span class="badge badge-neutral">memuat…</span>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Hasil screening</h2>
+      <a href="{% url 'backtests:compare' %}?batch={{ parent.pk }}" class="btn-ghost-sm">Compare penuh</a>
+    </div>
+    <div class="panel-body-flush overflow-x-auto">
+      <table class="data-table data-table-compact">
+        <thead>
+          <tr>
+            <th>Strategi</th>
+            <th>Status</th>
+            <th class="text-right">IS Sharpe</th>
+            <th class="text-right">OOS Sharpe</th>
+            <th class="text-right">OOS Return</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in children %}
+          <tr>
+            <td class="font-mono text-[12px]">{{ row.run.strategy_name }}</td>
+            <td><span class="badge {% if row.run.status == 'done' %}badge-profit{% elif row.run.status == 'failed' %}badge-loss{% else %}badge-warn{% endif %}">{{ row.run.status }}</span></td>
+            <td class="text-right font-mono text-[12px]">{% if row.metrics.is %}{{ row.metrics.is.sharpe|floatformat:3 }}{% else %}—{% endif %}</td>
+            <td class="text-right font-mono text-[12px]">{% if row.metrics.oos %}{{ row.metrics.oos.sharpe|floatformat:3 }}{% else %}—{% endif %}</td>
+            <td class="text-right font-mono text-[12px]">{% if row.metrics.oos %}{{ row.metrics.oos.total_return|pct }}{% else %}—{% endif %}</td>
+            <td><a class="btn-ghost-sm" href="{% url 'backtests:run_detail' row.run.pk %}">Detail</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

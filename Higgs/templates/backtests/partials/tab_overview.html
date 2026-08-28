@@ -1,0 +1,45 @@
+{% load backtest_extras %}
+<div class="kpi-grid">
+  {% if metrics.full %}
+  <div class="kpi-tile">
+    <p class="kpi-label">Final equity</p>
+    <p class="kpi-value">{{ metrics.full.final_equity|floatformat:0 }}</p>
+  </div>
+  <div class="kpi-tile">
+    <p class="kpi-label">Total return</p>
+    <p class="kpi-value text-base {% if metrics.full.total_return >= 0 %}metric-positive{% else %}metric-negative{% endif %}">{{ metrics.full.total_return|pct }}</p>
+  </div>
+  <div class="kpi-tile">
+    <p class="kpi-label">Sharpe</p>
+    <p class="kpi-value text-base">{{ metrics.full.sharpe|floatformat:3 }}</p>
+  </div>
+  <div class="kpi-tile">
+    <p class="kpi-label">Max DD</p>
+    <p class="kpi-value text-base metric-negative">{{ metrics.full.max_drawdown|pct }}</p>
+  </div>
+  <div class="kpi-tile">
+    <p class="kpi-label">Trades</p>
+    <p class="kpi-value">{{ metrics.full.trades }}</p>
+  </div>
+  <div class="kpi-tile">
+    <p class="kpi-label">Win rate</p>
+    <p class="kpi-value text-base">{{ metrics.full.win_rate|pct }}</p>
+  </div>
+  {% else %}
+  <div class="col-span-full empty-state">
+    <p class="text-sm">Metrik belum tersedia{% if run.status != 'done' %} — run masih {{ run.status }}{% endif %}.</p>
+  </div>
+  {% endif %}
+</div>
+
+<section class="panel mt-3">
+  <div class="panel-header"><h2 class="panel-title">Biaya & risiko</h2></div>
+  <div class="panel-body">
+    <dl class="grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-4">
+      <div><dt class="kpi-label">Equity awal</dt><dd class="font-mono">{{ run.initial_equity }}</dd></div>
+      <div><dt class="kpi-label">Risk</dt><dd class="font-mono">{{ run.risk_pct }}</dd></div>
+      <div><dt class="kpi-label">Spread</dt><dd class="font-mono">{{ run.spread }}</dd></div>
+      <div><dt class="kpi-label">Slippage</dt><dd class="font-mono">{{ run.slippage }}</dd></div>
+    </dl>
+  </div>
+</section>

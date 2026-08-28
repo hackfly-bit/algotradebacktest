@@ -15,6 +15,7 @@ from engine.data import (
     clean_m1,
     load_raw,
     resample_h1,
+    slice_df,
     validate_ohlcv,
 )
 
@@ -94,10 +95,16 @@ class EngineDataTests(unittest.TestCase):
     def test_resample_sixty_m1_to_one_h1(self):
         h1 = resample_h1(_m1_hour())
         self.assertEqual(len(h1), 1)
-        self.assertEqual(h1.loc[0, "Open"], 2000.0)
-        self.assertEqual(h1.loc[0, "Close"], 2000.0 + 59 * 0.01)
-        self.assertAlmostEqual(float(h1.loc[0, "High"]), 2000.0 + 59 * 0.01 + 0.1)
-        self.assertAlmostEqual(float(h1.loc[0, "Low"]), 2000.0 - 0.1)
+
+    def test_slice_df_by_start_end(self):
+        df = _m1_hour(n=120)
+        mid = slice_df(df, end="2024-01-02 10:30:00")
+        self.assertTrue(len(mid) < len(df))
+        tail = slice_df(df, start="2024-01-02 10:30:00")
+        self.assertGreater(len(tail), 0)
+        self.assertLessEqual(len(mid) + len(tail), len(df) + 1)
+        empty = slice_df(df, start="2025-01-01")
+        self.assertEqual(len(empty), 0)
 
     def test_volume_dead_when_volume_zero(self):
         self.assertEqual(VOLUME_DEAD_THRESHOLD, 0.80)

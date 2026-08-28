@@ -27,6 +27,6 @@ Taste-Skill + `docs/DESIGN.md`. Density 8–9. Ponytail: jangan over-build; jang
 
 ## Fase
 
-Fase 6 (persistensi BacktestRun + task) selesai. Django 6.1 belum punya DatabaseBackend untuk tasks — memakai ImmediateBackend. Berikutnya Fase 7: UI screening IS/OOS (form New run, list, detail tab 1–4, Compare, HTMX status).
+Fase 7 (UI screening IS/OOS) selesai. Berikutnya Fase 8: walk-forward tab + `WalkForwardFold`.
 
-Paritas penuh: `prepare_dataset.bat` lalu `py manage.py ingest_dataset ..\XAUUSD_2009_2026_M1.csv` dan `pytest tests/test_engine_parity.py`.
+Paritas: `prepare_dataset.bat` → ingest → screening `*` → `/compare/`.

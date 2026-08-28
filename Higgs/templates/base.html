@@ -94,9 +94,15 @@
           <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
         </button>
         <h1 class="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight">{% block topbar_title %}{{ page_title|default:"Higgs" }}{% endblock %}</h1>
-        <div id="job-status" class="hidden items-center gap-1.5 sm:flex">
+        <div
+          id="job-status"
+          class="hidden items-center gap-1.5 sm:flex"
+          hx-get="{% url 'backtests:global_status' %}"
+          hx-trigger="load, every 2s"
+          hx-swap="innerHTML"
+        >
           <span class="badge badge-neutral">idle</span>
-          <span class="text-[11px] text-ink/50 dark:text-ink-dark/50">Tidak ada job berjalan</span>
+          <span class="text-[11px] text-ink/50 dark:text-ink-dark/50">Memuat status…</span>
         </div>
         <button
           type="button"
