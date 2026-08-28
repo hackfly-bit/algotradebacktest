@@ -253,7 +253,7 @@ set PYTHONPATH=.
 python -m pytest tests\ -q
 ```
 
-Harus **69 passed** (parity notebook, rule interpreter, builder UI, walk-forward, gate, deep pipeline).
+Harus **71 passed** (parity notebook, rule interpreter, visual builder UI, walk-forward, gate, deep pipeline).
 
 Parity penuh membutuhkan dataset bootstrap + ingest terlebih dahulu.
 
