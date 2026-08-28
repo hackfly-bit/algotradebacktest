@@ -646,7 +646,7 @@ Sesuaikan `INSTALLED_APPS` path. Tailwind v4 CLI: `npx @tailwindcss/cli` scan te
 
 ### Fase 2b — Bootstrap dataset jika CSV merged tidak ada
 
-**Status:** backlog (tidak memblokir Fase 3). Wajib sebelum clone GitHub bisa ingest tanpa file lokal.
+**Status:** implemented (`prepare_dataset.bat` / `prepare_dataset.py`). Tidak memblokir Fase 3+. Wajib sebelum clone GitHub bisa ingest / parity tanpa file lokal.
 
 **Tujuan:** Jika `XAUUSD_2009_2026_M1.csv` tidak ada di root repo, unduh tick M1 tahunan dari HuggingFace, gabungkan, dan tulis file merged yang sama kontrak kolomnya dengan notebook.
 
