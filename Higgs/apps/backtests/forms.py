@@ -5,6 +5,7 @@ from datetime import date
 from django import forms
 
 import engine.strategies  # noqa: F401
+from apps.core.forms import default_run_initial
 from apps.marketdata.models import Dataset
 from engine.registry import list_strategies
 
@@ -69,3 +70,14 @@ class BacktestRunForm(forms.Form):
         self.fields["strategy_name"].choices = choices
         if not self.fields["dataset"].queryset.exists():
             self.fields["dataset"].empty_label = "Tidak ada dataset"
+        if not self.is_bound:
+            for key, value in default_run_initial().items():
+                self.fields[key].initial = value
+
+    def clean(self):
+        cleaned = super().clean()
+        is_end = cleaned.get("in_sample_end")
+        oos_start = cleaned.get("oos_start")
+        if is_end and oos_start and is_end >= oos_start:
+            raise forms.ValidationError("In-sample end harus sebelum OOS start.")
+        return cleaned

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mx-auto max-w-[720px]">
+  <p class="breadcrumb"><a href="{% url 'core:overview' %}">Ringkasan</a> / Pengaturan</p>
+
+  <section class="panel mt-3">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Default backtest</h2>
+        <p class="panel-subtitle">Nilai awal form Run baru · IS/OOS split</p>
+      </div>
+    </div>
+    <div class="panel-body">
+      <form method="post" class="max-w-xl">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <p class="mb-2 text-sm text-loss">{{ form.non_field_errors.0 }}</p>
+        {% endif %}
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {% for field in form %}
+          <label class="block text-[12px] font-medium" for="{{ field.id_for_label }}">
+            {{ field.label }}
+            {{ field }}
+            {% if field.errors %}<span class="font-normal text-loss">{{ field.errors.0 }}</span>{% endif %}
+          </label>
+          {% endfor %}
+        </div>
+        <button type="submit" class="btn-primary mt-4">Simpan</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="panel mt-3">
+    <div class="panel-header">
+      <h2 class="panel-title">Job engine</h2>
+    </div>
+    <div class="panel-body text-[12px] text-ink/70 dark:text-ink-dark/65">
+      <p>Run backtest dijalankan di <strong>background thread</strong> agar request HTTP tidak hang.</p>
+      <p class="mt-2">Screening dan MULTI_DEEP tetap berat; pantau status via badge HTMX di halaman run.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

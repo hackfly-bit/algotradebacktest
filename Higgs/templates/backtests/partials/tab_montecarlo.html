@@ -40,20 +40,25 @@
   <div class="panel">
     <div class="panel-header"><h2 class="panel-title">Bootstrap histogram</h2></div>
     <div class="panel-body">
+      {% if mc_hist_json != "null" %}
       <canvas id="mc-hist-chart" height="120"></canvas>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+      <script>
+      (function(){
+        const hist = {{ mc_hist_json|safe }};
+        if (!hist || !window.Chart) return;
+        const ctx = document.getElementById('mc-hist-chart');
+        const labels = hist.edges.slice(0, -1).map((e, i) => Math.round((e + hist.edges[i+1]) / 2));
+        new Chart(ctx, {
+          type: 'bar',
+          data: { labels, datasets: [{ label: 'Final equity', data: hist.counts, backgroundColor: 'rgba(15,122,108,0.55)' }] },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { beginAtZero: true } } }
+        });
+      })();
+      </script>
+      {% else %}
+      <div class="empty-state"><p class="text-sm">Histogram belum tersedia.</p></div>
+      {% endif %}
     </div>
   </div>
 </section>
-<script>
-(function(){
-  const hist = {{ mc_hist_json|safe }};
-  if (!hist || !window.Chart) return;
-  const ctx = document.getElementById('mc-hist-chart');
-  const labels = hist.edges.slice(0, -1).map((e, i) => Math.round((e + hist.edges[i+1]) / 2));
-  new Chart(ctx, {
-    type: 'bar',
-    data: { labels, datasets: [{ label: 'Final equity', data: hist.counts, backgroundColor: 'rgba(15,122,108,0.55)' }] },
-    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { beginAtZero: true } } }
-  });
-})();
-</script>

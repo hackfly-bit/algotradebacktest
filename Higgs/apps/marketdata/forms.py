@@ -1,8 +1,9 @@
 from pathlib import Path
 
 from django import forms
+from django.conf import settings
 
-DEFAULT_CSV_HINT = r"e:\Project\AlgoTradeBacktest\XAUUSD_2009_2026_M1.csv"
+DEFAULT_UPLOAD_HINT = "media/uploads/…"
 
 
 class DatasetIngestForm(forms.Form):
@@ -30,15 +31,15 @@ class DatasetIngestForm(forms.Form):
         widget=forms.ClearableFileInput(attrs={"class": "field-input", "accept": ".csv,text/csv"}),
     )
     local_path = forms.CharField(
-        label="Atau path lokal",
+        label="Atau path di bawah media/",
         required=False,
         widget=forms.TextInput(
             attrs={
                 "class": "field-input",
-                "placeholder": DEFAULT_CSV_HINT,
+                "placeholder": DEFAULT_UPLOAD_HINT,
             }
         ),
-        help_text=f"Contoh: {DEFAULT_CSV_HINT}",
+        help_text=f"Hanya file di dalam {settings.MEDIA_ROOT}. Untuk path lain gunakan manage.py ingest_dataset.",
     )
 
     def clean(self):
@@ -49,7 +50,13 @@ class DatasetIngestForm(forms.Form):
         if bool(csv_file) == bool(local_path):
             raise forms.ValidationError("Unggah satu file CSV atau isi path lokal, jangan keduanya.")
         if local_path:
+            media_root = Path(settings.MEDIA_ROOT).resolve()
             path = Path(local_path).expanduser()
+            if not path.is_absolute():
+                path = media_root / path
+            path = path.resolve()
+            if not path.is_relative_to(media_root):
+                raise forms.ValidationError("Path harus berada di dalam folder media aplikasi.")
             if not path.is_file():
                 raise forms.ValidationError(f"File tidak ditemukan: {local_path}")
             cleaned["local_path"] = str(path)

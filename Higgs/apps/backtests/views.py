@@ -7,8 +7,9 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.backtests.forms import BacktestRunForm
+from apps.backtests.job_runner import dispatch_run
 from apps.backtests.models import BacktestRun, DecisionGate, MetricSet, Trade
-from apps.backtests.tasks import create_screening_runs, enqueue_run
+from apps.backtests.tasks import create_screening_runs
 from apps.marketdata.models import Dataset
 
 VALID_TABS = {
@@ -109,26 +110,34 @@ def _resolve_tab(run: BacktestRun, tab: str) -> str:
 
 def _enqueue(run_id: int) -> None:
     def _go():
-        result = enqueue_run.enqueue(run_id)
-        BacktestRun.objects.filter(pk=run_id).update(task_id=str(getattr(result, "id", "") or ""))
+        dispatch_run(run_id)
+        BacktestRun.objects.filter(pk=run_id).update(task_id=f"async-{run_id}")
 
     transaction.on_commit(_go)
 
 
 @login_required
 def run_list(request):
-    qs = BacktestRun.objects.select_related("dataset").exclude(strategy_name__in={"*", "all"})
+    qs = (
+        BacktestRun.objects.select_related("dataset")
+        .exclude(strategy_name__in={"*", "all"})
+        .prefetch_related("decision_gate")
+    )
     status = request.GET.get("status", "").strip()
     strategy = request.GET.get("strategy", "").strip()
+    gate = request.GET.get("gate", "").strip()
     if status:
         qs = qs.filter(status=status)
     if strategy:
         qs = qs.filter(strategy_name=strategy)
+    if gate:
+        qs = qs.filter(decision_gate__status=gate)
     runs = qs.order_by("-created_at")[:100]
-    rows = []
-    for run in runs:
-        m = MetricSet.objects.filter(run=run, split="full").first()
-        rows.append({"run": run, "metric": m})
+    metric_map = {
+        m.run_id: m
+        for m in MetricSet.objects.filter(run_id__in=[r.pk for r in runs], split="full")
+    }
+    rows = [{"run": run, "metric": metric_map.get(run.pk)} for run in runs]
     return render(
         request,
         "backtests/run_list.html",
@@ -137,6 +146,7 @@ def run_list(request):
             "runs": rows,
             "status_filter": status,
             "strategy_filter": strategy,
+            "gate_filter": gate,
         },
     )
 

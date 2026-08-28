@@ -13,12 +13,12 @@ from apps.backtests.models import BacktestRun, MetricSet, WalkForwardFold
 from apps.backtests.tasks import enqueue_run
 from apps.marketdata.models import Dataset
 from engine.walk_forward import (
-    EMA_FAST_GRID,
     evaluate_wf_pass,
     run_walk_forward,
     walk_forward_windows,
     WalkForwardFoldResult,
 )
+from engine.tuning import get_strategy_tuning
 
 
 def test_walk_forward_windows_full_xauusd_range():
@@ -73,8 +73,9 @@ def test_run_walk_forward_returns_folds_on_synthetic_data():
         train_years=3,
         test_years=1,
         step_years=1,
-        ema_fast_grid=EMA_FAST_GRID,
     )
+    tuning = get_strategy_tuning("breakout_atr")
+    assert tuning.wf_variants[0].get("lookback") is not None
     assert len(folds) >= 2
     assert "wf_pass" in summary
     assert isinstance(wf_pass, bool)
