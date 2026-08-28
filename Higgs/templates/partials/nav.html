@@ -1,10 +1,41 @@
 {% with ns=request.resolver_match.namespace name=request.resolver_match.url_name %}
-<a href="{% url 'core:overview' %}" class="nav-link {% if ns == 'core' and name == 'overview' %}nav-link-active{% endif %}">Ringkasan</a>
-<a href="{% url 'marketdata:dataset_list' %}" class="nav-link {% if ns == 'marketdata' %}nav-link-active{% endif %}">Dataset</a>
-<a href="{% url 'strategies:strategy_list' %}" class="nav-link {% if ns == 'strategies' %}nav-link-active{% endif %}">Strategi</a>
-<a href="{% url 'backtests:run_new' %}" class="nav-link {% if ns == 'backtests' and name == 'run_new' %}nav-link-active{% endif %}">Run baru</a>
-<a href="{% url 'backtests:run_list' %}" class="nav-link {% if ns == 'backtests' and name == 'run_list' %}nav-link-active{% endif %}">Run</a>
-<a href="{% url 'backtests:compare' %}" class="nav-link {% if ns == 'backtests' and name == 'compare' %}nav-link-active{% endif %}">Bandingkan</a>
-<a href="{% url 'reports:export_list' %}" class="nav-link {% if ns == 'reports' %}nav-link-active{% endif %}">Ekspor</a>
-<a href="{% url 'core:settings' %}" class="nav-link {% if ns == 'core' and name == 'settings' %}nav-link-active{% endif %}">Pengaturan</a>
+<p class="nav-section-label">Cockpit</p>
+<a href="{% url 'core:overview' %}" class="nav-link {% if ns == 'core' and name == 'overview' %}nav-link-active{% endif %}">
+  <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z"/></svg>
+  Ringkasan
+</a>
+
+<p class="nav-section-label">Data</p>
+<a href="{% url 'marketdata:dataset_list' %}" class="nav-link {% if ns == 'marketdata' %}nav-link-active{% endif %}">
+  <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="8" cy="4" rx="6" ry="2"/><path d="M2 4v4c0 1.1 2.7 2 6 2s6-.9 6-2V4M2 8v4c0 1.1 2.7 2 6 2s6-.9 6-2V8"/></svg>
+  Dataset
+</a>
+
+<p class="nav-section-label">Research</p>
+<a href="{% url 'strategies:strategy_list' %}" class="nav-link {% if ns == 'strategies' %}nav-link-active{% endif %}">
+  <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l3-4 3 2 6-7"/></svg>
+  Strategi
+</a>
+<a href="{% url 'backtests:run_new' %}" class="nav-link {% if ns == 'backtests' and name == 'run_new' %}nav-link-active{% endif %}">
+  <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+  Run baru
+</a>
+<a href="{% url 'backtests:run_list' %}" class="nav-link {% if ns == 'backtests' and name == 'run_list' %}nav-link-active{% endif %}">
+  <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h10M3 12h6"/></svg>
+  Run
+</a>
+<a href="{% url 'backtests:compare' %}" class="nav-link {% if ns == 'backtests' and name == 'compare' %}nav-link-active{% endif %}">
+  <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13V6M6 13V3M10 13V8M14 13V4"/></svg>
+  Bandingkan
+</a>
+
+<p class="nav-section-label">Output</p>
+<a href="{% url 'reports:export_list' %}" class="nav-link {% if ns == 'reports' %}nav-link-active{% endif %}">
+  <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 7l3 3 3-3M3 12h10"/></svg>
+  Ekspor
+</a>
+<a href="{% url 'core:settings' %}" class="nav-link {% if ns == 'core' and name == 'settings' %}nav-link-active{% endif %}">
+  <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M3 13l1.5-1.5M11.5 4.5L13 3"/></svg>
+  Pengaturan
+</a>
 {% endwith %}

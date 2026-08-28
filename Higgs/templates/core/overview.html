@@ -1,27 +1,165 @@
 {% extends "base.html" %}
 
+{% block topbar_title %}{{ page_title|default:"Ringkasan" }}{% endblock %}
+
 {% block content %}
-<section class="border-b border-black/10 pb-3 dark:border-white/10">
-  {% if dataset_count %}
-  <h2 class="text-sm font-medium">{{ dataset_count }} dataset terdaftar</h2>
-  <p class="mt-1 max-w-prose text-sm text-ink/75 dark:text-ink-dark/75">
-    Run belum ada. Angka KPI backtest tidak ditampilkan.
-  </p>
-  {% if latest_dataset %}
-  <p class="mt-2 font-mono text-[12px] text-ink/70 dark:text-ink-dark/70">
-    Terbaru:
-    <a class="text-accent hover:underline dark:text-accent-dark" href="{% url 'marketdata:dataset_detail' latest_dataset.pk %}">{{ latest_dataset.source_name }}</a>
-  </p>
-  {% endif %}
-  {% else %}
-  <h2 class="text-sm font-medium">Cockpit kosong</h2>
-  <p class="mt-1 max-w-prose text-sm text-ink/75 dark:text-ink-dark/75">
-    Belum ada dataset. Belum ada run. Angka KPI tidak ditampilkan karena belum ada hasil backtest.
-  </p>
-  {% endif %}
-  <div class="mt-3 flex flex-wrap gap-2">
-    <a href="{% url 'marketdata:dataset_list' %}" class="btn-primary">Ke dataset</a>
-    <a href="{% url 'backtests:run_new' %}" class="btn-ghost">Run baru</a>
+<div class="mx-auto flex max-w-[1400px] flex-col gap-3">
+  <div class="kpi-grid">
+    <div class="kpi-tile">
+      <p class="kpi-label">Instrument</p>
+      <p class="kpi-value text-base">XAUUSD</p>
+      <p class="kpi-meta">Timeframe H1 · rules-based</p>
+    </div>
+    <div class="kpi-tile">
+      <p class="kpi-label">Dataset</p>
+      <p class="kpi-value">{{ dataset_count }}</p>
+      <p class="kpi-meta">{% if latest_dataset %}{{ latest_dataset.source_name|truncatechars:28 }}{% else %}Belum di-ingest{% endif %}</p>
+    </div>
+    <div class="kpi-tile">
+      <p class="kpi-label">Strategi</p>
+      <p class="kpi-value">{{ strategy_count }}</p>
+      <p class="kpi-meta">Plugin registry aktif</p>
+    </div>
+    <div class="kpi-tile">
+      <p class="kpi-label">Backtest run</p>
+      <p class="kpi-value">{{ run_total }}</p>
+      <p class="kpi-meta">
+        {% if run_running %}<span class="badge badge-warn">running {{ run_running }}</span>{% endif %}
+        {% if run_done %}<span class="badge badge-profit">done {{ run_done }}</span>{% endif %}
+        {% if run_failed %}<span class="badge badge-loss">failed {{ run_failed }}</span>{% endif %}
+        {% if not run_total %}Belum ada run{% endif %}
+      </p>
+    </div>
+    {% if latest_dataset %}
+    <div class="kpi-tile col-span-2 lg:col-span-2">
+      <p class="kpi-label">Data aktif</p>
+      <p class="kpi-value text-base font-mono">{{ latest_dataset.rows_h1|default:"—" }}</p>
+      <p class="kpi-meta">bar H1 · volume {% if latest_dataset.volume_usable %}usable{% else %}dead{% endif %}</p>
+    </div>
+    {% endif %}
   </div>
-</section>
+
+  <div class="grid gap-3 lg:grid-cols-3">
+    <section class="panel lg:col-span-2">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Run terbaru</h2>
+          <p class="panel-subtitle">Screening & deep pipeline</p>
+        </div>
+        <a href="{% url 'backtests:run_new' %}" class="btn-ghost-sm">+ Run baru</a>
+      </div>
+      <div class="panel-body-flush">
+        {% if recent_runs %}
+        <div class="overflow-x-auto">
+          <table class="data-table data-table-compact">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Strategi</th>
+                <th>Status</th>
+                <th class="text-right">Equity</th>
+                <th class="text-right">Sharpe</th>
+                <th class="text-right">Trades</th>
+                <th>Dibuat</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in recent_runs %}
+              <tr>
+                <td class="font-mono text-[12px]">#{{ row.id }}</td>
+                <td class="font-mono text-[12px]">{{ row.strategy_name }}</td>
+                <td>
+                  {% if row.status == "done" %}<span class="badge badge-profit">done</span>
+                  {% elif row.status == "running" %}<span class="badge badge-warn">running</span>
+                  {% elif row.status == "failed" %}<span class="badge badge-loss">failed</span>
+                  {% else %}<span class="badge badge-neutral">{{ row.status }}</span>{% endif %}
+                </td>
+                <td class="text-right font-mono text-[12px]">
+                  {% if row.final_equity %}{{ row.final_equity|floatformat:0 }}{% else %}—{% endif %}
+                </td>
+                <td class="text-right font-mono text-[12px]">
+                  {% if row.sharpe %}{{ row.sharpe|floatformat:3 }}{% else %}—{% endif %}
+                </td>
+                <td class="text-right font-mono text-[12px]">{{ row.trades|default:"—" }}</td>
+                <td class="font-mono text-[11px] text-ink/60 dark:text-ink-dark/55">{{ row.created_at|date:"Y-m-d H:i" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="panel-body">
+          <div class="empty-state">
+            <p class="text-sm font-medium text-ink dark:text-ink-dark">Belum ada backtest run</p>
+            <p class="max-w-prose text-[12px] text-ink/65 dark:text-ink-dark/60">
+              KPI equity dan Sharpe muncul setelah run selesai. Mulai dari screening strategi atau deep pipeline.
+            </p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <a href="{% url 'backtests:run_new' %}" class="btn-primary">Buat run</a>
+              <a href="{% url 'strategies:strategy_list' %}" class="btn-ghost">Lihat strategi</a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Aksi cepat</h2>
+          <p class="panel-subtitle">Workflow research</p>
+        </div>
+      </div>
+      <div class="panel-body flex flex-col gap-2">
+        <a href="{% url 'marketdata:dataset_list' %}" class="btn-ghost w-full justify-start">Ingest / kelola dataset</a>
+        <a href="{% url 'strategies:strategy_list' %}" class="btn-ghost w-full justify-start">Registry strategi ({{ strategy_count }})</a>
+        <a href="{% url 'backtests:compare' %}" class="btn-ghost w-full justify-start">Bandingkan IS/OOS</a>
+        <a href="{% url 'reports:export_list' %}" class="btn-ghost w-full justify-start">Ekspor spec MQL5</a>
+      </div>
+    </section>
+  </div>
+
+  {% if latest_dataset %}
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Dataset aktif</h2>
+        <p class="panel-subtitle">{{ latest_dataset.symbol }} · {{ latest_dataset.timeframe }}</p>
+      </div>
+      <a href="{% url 'marketdata:dataset_detail' latest_dataset.pk %}" class="btn-ghost-sm">Detail</a>
+    </div>
+    <div class="panel-body">
+      <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+        <div>
+          <dt class="kpi-label">Nama</dt>
+          <dd class="mt-1 text-[12px] font-medium">{{ latest_dataset.source_name|truncatechars:24 }}</dd>
+        </div>
+        <div>
+          <dt class="kpi-label">rows_m1</dt>
+          <dd class="mt-1 font-mono text-sm">{{ latest_dataset.rows_m1 }}</dd>
+        </div>
+        <div>
+          <dt class="kpi-label">rows_h1</dt>
+          <dd class="mt-1 font-mono text-sm">{{ latest_dataset.rows_h1 }}</dd>
+        </div>
+        <div>
+          <dt class="kpi-label">Volume</dt>
+          <dd class="mt-1">
+            {% if latest_dataset.volume_usable %}<span class="badge badge-profit">usable</span>{% else %}<span class="badge badge-neutral">dead</span>{% endif %}
+          </dd>
+        </div>
+        <div>
+          <dt class="kpi-label">Mulai</dt>
+          <dd class="mt-1 font-mono text-[11px]">{% if latest_dataset.start_ts %}{{ latest_dataset.start_ts|date:"Y-m-d" }}{% else %}—{% endif %}</dd>
+        </div>
+        <div>
+          <dt class="kpi-label">Selesai</dt>
+          <dd class="mt-1 font-mono text-[11px]">{% if latest_dataset.end_ts %}{{ latest_dataset.end_ts|date:"Y-m-d" }}{% else %}—{% endif %}</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+  {% endif %}
+</div>
 {% endblock %}

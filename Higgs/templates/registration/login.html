@@ -1,20 +1,27 @@
 {% extends "base.html" %}
 
 {% block body %}
-<div class="flex min-h-full items-center justify-center p-4">
-  <form method="post" class="w-full max-w-sm rounded-[6px] border border-black/10 bg-surface p-4 dark:border-white/10 dark:bg-surface-dark">
+<div class="login-shell dashboard-canvas">
+  <div class="login-grid" aria-hidden="true"></div>
+  <form method="post" class="login-card">
     {% csrf_token %}
     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-    <h1 class="text-sm font-semibold">Higgs</h1>
-    <p class="mt-1 text-[12px] text-ink/60 dark:text-ink-dark/55">Masuk untuk membuka cockpit backtest.</p>
+    <div class="flex items-center gap-3">
+      <span class="sidebar-brand-mark">Hg</span>
+      <div>
+        <h1 class="text-base font-semibold tracking-tight">Higgs</h1>
+        <p class="text-[11px] text-ink/55 dark:text-ink-dark/50">XAUUSD backtest cockpit</p>
+      </div>
+    </div>
+    <p class="mt-4 text-[12px] text-ink/65 dark:text-ink-dark/60">Masuk untuk membuka dashboard research rules-based.</p>
     {% if form.non_field_errors %}
-    <p class="mt-3 text-sm text-loss">{{ form.non_field_errors.0 }}</p>
+    <p class="mt-3 rounded-[6px] border border-loss/20 bg-loss/5 px-3 py-2 text-sm text-loss">{{ form.non_field_errors.0 }}</p>
     {% endif %}
-    <label class="mt-3 block text-[12px] font-medium" for="id_username">Nama pengguna</label>
+    <label class="mt-4 block text-[12px] font-medium" for="id_username">Nama pengguna</label>
     <input class="field-input" type="text" name="username" id="id_username" autocomplete="username" required autofocus>
     <label class="mt-3 block text-[12px] font-medium" for="id_password">Kata sandi</label>
     <input class="field-input" type="password" name="password" id="id_password" autocomplete="current-password" required>
-    <button type="submit" class="btn-primary mt-4 w-full">Masuk</button>
+    <button type="submit" class="btn-primary mt-5 w-full">Masuk ke cockpit</button>
   </form>
 </div>
 {% endblock %}

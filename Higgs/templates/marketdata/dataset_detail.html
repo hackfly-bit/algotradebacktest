@@ -1,85 +1,118 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="flex flex-col gap-4">
-  <p class="text-[12px] text-ink/60 dark:text-ink-dark/55">
-    <a class="text-accent hover:underline dark:text-accent-dark" href="{% url 'marketdata:dataset_list' %}">Dataset</a>
-    / {{ dataset.source_name }}
+<div class="mx-auto flex max-w-[1400px] flex-col gap-3">
+  <p class="breadcrumb">
+    <a href="{% url 'core:overview' %}">Ringkasan</a>
+    / <a href="{% url 'marketdata:dataset_list' %}">Dataset</a>
+    / <span>{{ dataset.source_name }}</span>
   </p>
 
-  <dl class="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-    <div>
-      <dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">Simbol</dt>
-      <dd>{{ dataset.symbol }}</dd>
+  <div class="kpi-grid">
+    <div class="kpi-tile">
+      <p class="kpi-label">Simbol</p>
+      <p class="kpi-value text-base">{{ dataset.symbol }}</p>
+      <p class="kpi-meta">{{ dataset.timeframe }}</p>
     </div>
-    <div>
-      <dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">TF</dt>
-      <dd>{{ dataset.timeframe }}</dd>
+    <div class="kpi-tile">
+      <p class="kpi-label">rows_m1</p>
+      <p class="kpi-value">{{ dataset.rows_m1 }}</p>
+      <p class="kpi-meta">bar mentah</p>
     </div>
-    <div>
-      <dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">rows_m1</dt>
-      <dd class="font-mono">{{ dataset.rows_m1 }}</dd>
+    <div class="kpi-tile">
+      <p class="kpi-label">rows_h1</p>
+      <p class="kpi-value">{{ dataset.rows_h1 }}</p>
+      <p class="kpi-meta">cache resample</p>
     </div>
-    <div>
-      <dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">rows_h1</dt>
-      <dd class="font-mono">{{ dataset.rows_h1 }}</dd>
+    <div class="kpi-tile">
+      <p class="kpi-label">Volume</p>
+      <p class="kpi-value text-base">{% if dataset.volume_usable %}OK{% else %}Dead{% endif %}</p>
+      <p class="kpi-meta">filter strategi</p>
     </div>
-    <div>
-      <dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">volume_usable</dt>
-      <dd>{% if dataset.volume_usable %}ya{% else %}tidak{% endif %}</dd>
-    </div>
-    <div>
-      <dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">Mulai</dt>
-      <dd class="font-mono text-[12px]">{% if dataset.start_ts %}{{ dataset.start_ts|date:"Y-m-d H:i" }}{% else %}?{% endif %}</dd>
-    </div>
-    <div>
-      <dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">Selesai</dt>
-      <dd class="font-mono text-[12px]">{% if dataset.end_ts %}{{ dataset.end_ts|date:"Y-m-d H:i" }}{% else %}?{% endif %}</dd>
-    </div>
-    <div>
-      <dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">Dibuat</dt>
-      <dd class="font-mono text-[12px]">{{ dataset.created_at|date:"Y-m-d H:i" }}</dd>
-    </div>
-  </dl>
+  </div>
 
-  <section>
-    <h2 class="text-sm font-medium">Validasi M1</h2>
-    <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-3">
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">duplicate_ts</dt><dd class="font-mono">{{ m1_report.duplicate_ts }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">ohlc_invalid</dt><dd class="font-mono">{{ m1_report.ohlc_invalid }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">volume_zero_pct</dt><dd class="font-mono">{{ m1_report.volume_zero_pct }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">volume_dead</dt><dd>{{ m1_report.volume_dead }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">gap_gt_2pct</dt><dd class="font-mono">{{ m1_report.gap_gt_2pct }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">max_abs_return</dt><dd class="font-mono">{{ m1_report.max_abs_return }}</dd></div>
-    </dl>
-  </section>
-
-  <section>
-    <h2 class="text-sm font-medium">Validasi H1</h2>
-    <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-3">
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">duplicate_ts</dt><dd class="font-mono">{{ h1_report.duplicate_ts }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">ohlc_invalid</dt><dd class="font-mono">{{ h1_report.ohlc_invalid }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">volume_zero_pct</dt><dd class="font-mono">{{ h1_report.volume_zero_pct }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">volume_dead</dt><dd>{{ h1_report.volume_dead }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">gap_gt_2pct</dt><dd class="font-mono">{{ h1_report.gap_gt_2pct }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">max_abs_return</dt><dd class="font-mono">{{ h1_report.max_abs_return }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">expected_bars</dt><dd class="font-mono">{{ h1_report.expected_bars }}</dd></div>
-      <div><dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">missing_bars</dt><dd class="font-mono">{{ h1_report.missing_bars }}</dd></div>
-    </dl>
-  </section>
-
-  <section class="border-t border-black/10 pt-3 dark:border-white/10">
-    <h2 class="text-sm font-medium">Path</h2>
-    <dl class="mt-2 space-y-1.5 text-[12px]">
-      <div>
-        <dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">raw_path</dt>
-        <dd class="font-mono break-all">{{ dataset.raw_path }}</dd>
+  <div class="grid gap-3 lg:grid-cols-2">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Rentang waktu</h2>
+          <p class="panel-subtitle">Coverage dataset</p>
+        </div>
       </div>
-      <div>
-        <dt class="text-[11px] text-ink/55 dark:text-ink-dark/50">cache_path</dt>
-        <dd class="font-mono break-all">{{ dataset.cache_path }}</dd>
+      <div class="panel-body">
+        <dl class="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <dt class="kpi-label">Mulai</dt>
+            <dd class="mt-1 font-mono text-[12px]">{% if dataset.start_ts %}{{ dataset.start_ts|date:"Y-m-d H:i" }}{% else %}?{% endif %}</dd>
+          </div>
+          <div>
+            <dt class="kpi-label">Selesai</dt>
+            <dd class="mt-1 font-mono text-[12px]">{% if dataset.end_ts %}{{ dataset.end_ts|date:"Y-m-d H:i" }}{% else %}?{% endif %}</dd>
+          </div>
+          <div>
+            <dt class="kpi-label">Dibuat</dt>
+            <dd class="mt-1 font-mono text-[12px]">{{ dataset.created_at|date:"Y-m-d H:i" }}</dd>
+          </div>
+          <div>
+            <dt class="kpi-label">volume_usable</dt>
+            <dd class="mt-1">{% if dataset.volume_usable %}<span class="badge badge-profit">ya</span>{% else %}<span class="badge badge-neutral">tidak</span>{% endif %}</dd>
+          </div>
+        </dl>
       </div>
-    </dl>
-  </section>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Path file</h2>
+          <p class="panel-subtitle">Tidak disimpan bar-per-bar di SQLite</p>
+        </div>
+      </div>
+      <div class="panel-body space-y-3 text-[12px]">
+        <div>
+          <p class="kpi-label">raw_path</p>
+          <p class="mt-1 break-all font-mono text-ink/80 dark:text-ink-dark/75">{{ dataset.raw_path }}</p>
+        </div>
+        <div>
+          <p class="kpi-label">cache_path</p>
+          <p class="mt-1 break-all font-mono text-ink/80 dark:text-ink-dark/75">{{ dataset.cache_path }}</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid gap-3 lg:grid-cols-2">
+    <section class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Validasi M1</h2>
+      </div>
+      <div class="panel-body">
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+          <div><dt class="kpi-label">duplicate_ts</dt><dd class="mt-0.5 font-mono">{{ m1_report.duplicate_ts }}</dd></div>
+          <div><dt class="kpi-label">ohlc_invalid</dt><dd class="mt-0.5 font-mono">{{ m1_report.ohlc_invalid }}</dd></div>
+          <div><dt class="kpi-label">volume_zero_pct</dt><dd class="mt-0.5 font-mono">{{ m1_report.volume_zero_pct }}</dd></div>
+          <div><dt class="kpi-label">volume_dead</dt><dd class="mt-0.5">{% if m1_report.volume_dead %}<span class="badge badge-neutral">ya</span>{% else %}<span class="badge badge-profit">tidak</span>{% endif %}</dd></div>
+          <div><dt class="kpi-label">gap_gt_2pct</dt><dd class="mt-0.5 font-mono">{{ m1_report.gap_gt_2pct }}</dd></div>
+          <div><dt class="kpi-label">max_abs_return</dt><dd class="mt-0.5 font-mono">{{ m1_report.max_abs_return }}</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Validasi H1</h2>
+      </div>
+      <div class="panel-body">
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+          <div><dt class="kpi-label">duplicate_ts</dt><dd class="mt-0.5 font-mono">{{ h1_report.duplicate_ts }}</dd></div>
+          <div><dt class="kpi-label">ohlc_invalid</dt><dd class="mt-0.5 font-mono">{{ h1_report.ohlc_invalid }}</dd></div>
+          <div><dt class="kpi-label">volume_zero_pct</dt><dd class="mt-0.5 font-mono">{{ h1_report.volume_zero_pct }}</dd></div>
+          <div><dt class="kpi-label">volume_dead</dt><dd class="mt-0.5">{% if h1_report.volume_dead %}<span class="badge badge-neutral">ya</span>{% else %}<span class="badge badge-profit">tidak</span>{% endif %}</dd></div>
+          <div><dt class="kpi-label">expected_bars</dt><dd class="mt-0.5 font-mono">{{ h1_report.expected_bars }}</dd></div>
+          <div><dt class="kpi-label">missing_bars</dt><dd class="mt-0.5 font-mono">{{ h1_report.missing_bars }}</dd></div>
+        </dl>
+      </div>
+    </section>
+  </div>
 </div>
 {% endblock %}

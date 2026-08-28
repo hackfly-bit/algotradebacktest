@@ -21,7 +21,7 @@
   <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
   <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
 </head>
-<body class="min-h-full bg-canvas font-sans text-sm text-ink dark:bg-canvas-dark dark:text-ink-dark">
+<body class="min-h-full font-sans text-sm text-ink dark:text-ink-dark">
   {% block body %}
   <div
     x-data="{ navOpen: false, dark: document.documentElement.classList.contains('dark') }"
@@ -30,7 +30,7 @@
     <div
       x-show="navOpen"
       x-cloak
-      class="fixed inset-0 z-20 bg-black/40 lg:hidden"
+      class="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm lg:hidden"
       @click="navOpen = false"
     ></div>
 
@@ -38,51 +38,82 @@
       class="fixed inset-y-0 left-0 z-30 flex w-60 shrink-0 flex-col border-r border-black/10 bg-surface transition-transform duration-200 ease-out dark:border-white/10 dark:bg-surface-dark -translate-x-full lg:static lg:translate-x-0"
       :class="navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
     >
-      <div class="flex h-12 items-center justify-between border-b border-black/10 px-3 dark:border-white/10">
-        <a href="{% url 'core:overview' %}" class="text-sm font-semibold tracking-tight">Higgs</a>
-        <span class="font-mono text-[10px] text-ink/50 dark:text-ink-dark/50">XAUUSD</span>
+      <div class="sidebar-brand">
+        <a href="{% url 'core:overview' %}" class="flex min-w-0 flex-1 items-center gap-2.5">
+          <span class="sidebar-brand-mark">Hg</span>
+          <span class="min-w-0">
+            <span class="block truncate text-sm font-semibold tracking-tight">Higgs</span>
+            <span class="block truncate font-mono text-[10px] text-ink/50 dark:text-ink-dark/50">Backtest Cockpit</span>
+          </span>
+        </a>
       </div>
-      <nav class="flex flex-1 flex-col gap-0.5 p-2">
+      <nav class="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
         {% include "partials/nav.html" %}
       </nav>
       {% if user.is_authenticated %}
-      <form method="post" action="{% url 'logout' %}" class="border-t border-black/10 p-2 dark:border-white/10">
-        {% csrf_token %}
-        <p class="mb-1 truncate px-2 text-[11px] text-ink/60 dark:text-ink-dark/60">{{ user.get_username }}</p>
-        <button type="submit" class="nav-link w-full text-left">Keluar</button>
-      </form>
+      <div class="border-t border-black/10 p-2 dark:border-white/10">
+        <div class="mb-2 flex items-center gap-2 rounded-[6px] bg-canvas/60 px-2 py-1.5 dark:bg-canvas-dark/60">
+          <span class="flex h-7 w-7 items-center justify-center rounded-[6px] bg-accent/15 font-mono text-[10px] font-semibold text-accent dark:bg-accent-dark/20 dark:text-accent-dark">
+            {{ user.get_username|slice:":2"|upper }}
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-[12px] font-medium">{{ user.get_username }}</p>
+            <p class="truncate font-mono text-[10px] text-ink/50 dark:text-ink-dark/50">Staff · local</p>
+          </div>
+        </div>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="nav-link w-full text-left">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M11 11l3-3-3-3M14 8H6"/></svg>
+            Keluar
+          </button>
+        </form>
+      </div>
       {% endif %}
     </aside>
 
     <div class="flex min-h-full min-w-0 flex-1 flex-col">
-      <header class="flex h-12 items-center gap-3 border-b border-black/10 bg-surface px-3 dark:border-white/10 dark:bg-surface-dark">
-        <button type="button" class="btn-ghost px-2 py-1 lg:hidden" @click="navOpen = true" aria-label="Buka menu">Menu</button>
-        <h1 class="min-w-0 flex-1 truncate text-sm font-medium">{% block topbar_title %}{{ page_title|default:"Higgs" }}{% endblock %}</h1>
-        <div class="hidden font-mono text-[11px] text-ink/55 sm:block dark:text-ink-dark/50">
-          {% block dataset_slot %}
-            {% if latest_dataset %}
-              {{ latest_dataset.source_name }}
-            {% else %}
-              Dataset: belum dipilih
-            {% endif %}
-          {% endblock %}
-        </div>
-        <div id="job-status" class="hidden font-mono text-[11px] text-ink/55 sm:block dark:text-ink-dark/50">
-          Tidak ada job berjalan
+      <div class="market-strip">
+        <span class="market-pill">
+          <span class="market-dot"></span>
+          <span class="font-semibold text-ink dark:text-ink-dark">XAUUSD</span>
+        </span>
+        <span class="text-ink/55 dark:text-ink-dark/50">TF <span class="text-ink dark:text-ink-dark">1H</span></span>
+        <span class="text-ink/55 dark:text-ink-dark/50">Engine <span class="text-ink dark:text-ink-dark">rules-based</span></span>
+        {% block market_slot %}
+          {% if latest_dataset %}
+            <span class="text-ink/55 dark:text-ink-dark/50">Dataset <span class="text-accent dark:text-accent-dark">{{ latest_dataset.source_name|truncatechars:32 }}</span></span>
+          {% else %}
+            <span class="text-ink/55 dark:text-ink-dark/50">Dataset <span class="text-warn">belum dipilih</span></span>
+          {% endif %}
+        {% endblock %}
+      </div>
+
+      <header class="topbar">
+        <button type="button" class="btn-ghost-sm lg:hidden" @click="navOpen = true" aria-label="Buka menu">
+          <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+        </button>
+        <h1 class="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight">{% block topbar_title %}{{ page_title|default:"Higgs" }}{% endblock %}</h1>
+        <div id="job-status" class="hidden items-center gap-1.5 sm:flex">
+          <span class="badge badge-neutral">idle</span>
+          <span class="text-[11px] text-ink/50 dark:text-ink-dark/50">Tidak ada job berjalan</span>
         </div>
         <button
           type="button"
-          class="btn-ghost px-2 py-1"
+          class="btn-ghost-sm"
           @click="dark = !dark; document.documentElement.classList.toggle('dark', dark); localStorage.setItem('higgs-theme', dark ? 'dark' : 'light')"
+          aria-label="Toggle tema"
         >
-          <span x-text="dark ? 'Terang' : 'Gelap'"></span>
+          <svg x-show="!dark" class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M3 13l1.5-1.5M11.5 4.5L13 3"/></svg>
+          <svg x-show="dark" x-cloak class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2a6 6 0 108 8 5 5 0 01-8-8z"/></svg>
         </button>
       </header>
-      <main class="min-h-0 flex-1 overflow-auto p-3">
+
+      <main class="dashboard-canvas min-h-0 flex-1 overflow-auto p-3 lg:p-4">
         {% if messages %}
-        <ul class="mb-3 space-y-1">
+        <ul class="mx-auto mb-3 max-w-[1400px] space-y-1">
           {% for message in messages %}
-          <li class="rounded-[6px] border border-black/10 bg-surface px-3 py-2 text-sm dark:border-white/10 dark:bg-surface-dark">{{ message }}</li>
+          <li class="rounded-[6px] border border-black/10 bg-surface px-3 py-2 text-sm shadow-sm dark:border-white/10 dark:bg-surface-dark">{{ message }}</li>
           {% endfor %}
         </ul>
         {% endif %}
