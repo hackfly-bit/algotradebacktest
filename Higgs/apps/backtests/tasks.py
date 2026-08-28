@@ -3,19 +3,34 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from django.conf import settings
 from django.db import transaction
 from django.tasks import task
 from django.utils import timezone as dj_tz
 
 import engine.strategies  # noqa: F401
-from apps.backtests.models import BacktestRun, MetricSet, Trade, WalkForwardFold
+from apps.backtests.models import (
+    BacktestRun,
+    DecisionGate,
+    MetricSet,
+    MonteCarloSummary,
+    RobustnessRow,
+    Trade,
+    WalkForwardFold,
+)
+from apps.reports.models import ExportFile
 from engine.backtester import apply_strategy, run_backtest
 from engine.data import slice_df
+from engine.decision_gate import evaluate_decision_gate
 from engine.indicators import add_indicators
+from engine.monte_carlo import MC_SEED, N_MC_SIMS, evaluate_mc_pass, run_monte_carlo
+from engine.mql5_export import Mql5SpecContext, build_mql5_spec, export_mql5_spec
 from engine.registry import resolve_strategy_queue
+from engine.robustness import run_robustness
 from engine.walk_forward import run_walk_forward
 
 METRIC_FIELDS = {
@@ -109,6 +124,13 @@ def _persist_result(
     MetricSet.objects.create(run=run, split=split, label=label, extras=extras, **payload)
 
 
+def _update_run_params(run: BacktestRun, updates: dict) -> None:
+    params = dict(run.params or {})
+    params.update(updates)
+    run.params = params
+    run.save(update_fields=["params"])
+
+
 def _persist_walk_forward(run: BacktestRun, folds, wf_pass: bool, summary: dict) -> None:
     WalkForwardFold.objects.filter(run=run).delete()
     if folds:
@@ -139,10 +161,113 @@ def _persist_walk_forward(run: BacktestRun, folds, wf_pass: bool, summary: dict)
         label="summary",
         extras={**summary, "wf_pass": wf_pass},
     )
-    params = dict(run.params or {})
-    params["WF_PASS"] = wf_pass
-    run.params = params
-    run.save(update_fields=["params"])
+    _update_run_params(run, {"WF_PASS": wf_pass})
+
+
+def _persist_robustness(run: BacktestRun, result) -> None:
+    RobustnessRow.objects.filter(run=run).delete()
+    rows = result.param_grid + result.perturb_rows + result.cost_rows
+    if rows:
+        RobustnessRow.objects.bulk_create(
+            [
+                RobustnessRow(
+                    run=run,
+                    kind=row.kind,
+                    label=row.label,
+                    oos_return=row.oos_return,
+                    oos_sharpe=row.oos_sharpe,
+                    oos_dd=row.oos_dd,
+                    trades=row.trades,
+                    extras=row.extras,
+                )
+                for row in rows
+            ],
+            batch_size=200,
+        )
+    MetricSet.objects.filter(run=run, split="robustness", label="summary").delete()
+    MetricSet.objects.create(
+        run=run,
+        split="robustness",
+        label="summary",
+        extras={
+            "param_stable": result.param_stable,
+            "perturb_stable": result.perturb_stable,
+            "cost_pass": result.cost_pass,
+        },
+    )
+    _update_run_params(
+        run,
+        {
+            "PARAM_STABLE": result.param_stable,
+            "PERTURB_STABLE": result.perturb_stable,
+            "COST_PASS": result.cost_pass,
+        },
+    )
+
+
+def _persist_monte_carlo(run: BacktestRun, mc: dict, mc_pass: bool) -> None:
+    MonteCarloSummary.objects.filter(run=run).delete()
+    for mode in ("shuffle", "bootstrap", "perturb", "slippage_mc"):
+        data = mc.get(mode)
+        if not data:
+            continue
+        payload = dict(data)
+        hist = payload.pop("histogram", None)
+        extras = {"histogram": hist} if hist else {}
+        MonteCarloSummary.objects.create(
+            run=run,
+            mode=mode,
+            n_sims=int(payload.get("n_sims") or N_MC_SIMS),
+            median_final=payload.get("median_final"),
+            p5_final=payload.get("p5_final"),
+            p25_final=payload.get("p25_final"),
+            p50_final=payload.get("p50_final"),
+            p75_final=payload.get("p75_final"),
+            p95_final=payload.get("p95_final"),
+            median_max_dd=payload.get("median_max_dd"),
+            p95_worst_dd=payload.get("p95_worst_dd"),
+            prob_loss=payload.get("prob_loss"),
+            prob_dd_gt_30=payload.get("prob_dd_gt_30"),
+            extras=extras,
+        )
+    MetricSet.objects.filter(run=run, split="mc", label="summary").delete()
+    boot = mc.get("bootstrap", {})
+    MetricSet.objects.create(
+        run=run,
+        split="mc",
+        label="summary",
+        extras={"mc_pass": mc_pass, "bootstrap": boot},
+    )
+    _update_run_params(run, {"MC_PASS": mc_pass})
+
+
+def _persist_decision_gate(run: BacktestRun, gate) -> None:
+    DecisionGate.objects.update_or_create(
+        run=run,
+        defaults={
+            "in_sample": gate.in_sample,
+            "out_of_sample": gate.out_of_sample,
+            "walk_forward": gate.walk_forward,
+            "parameter_stability": gate.parameter_stability,
+            "cost_stress": gate.cost_stress,
+            "monte_carlo": gate.monte_carlo,
+            "status": gate.status,
+            "implement_mql5": gate.implement_mql5,
+            "n_pass": gate.n_pass,
+        },
+    )
+    _update_run_params(run, {"STATUS": gate.status, "implement_mql5": gate.implement_mql5})
+
+
+def _persist_exports(run: BacktestRun, md_path: Path, txt_path: Path) -> None:
+    ExportFile.objects.filter(run=run).delete()
+    for kind, path in (("md", md_path), ("txt", txt_path)):
+        ExportFile.objects.create(
+            run=run,
+            kind=kind,
+            path=str(path),
+            filename=path.name,
+        )
 
 
 def _run_backtest_on_df(
@@ -169,6 +294,101 @@ def _run_backtest_on_df(
         name=name,
         params=params,
     )
+
+
+def _run_deep_pipeline(
+    run: BacktestRun,
+    df: pd.DataFrame,
+    strategy_name: str,
+    params: dict,
+    is_end: str,
+    oos_start: str,
+    is_result,
+    oos_result,
+    full_result,
+) -> None:
+    run_kwargs = {
+        "initial_equity": run.initial_equity,
+        "fee": run.fee,
+        "slippage": run.slippage,
+        "commission_per_lot": run.commission_per_lot,
+        "spread": run.spread,
+        "risk_pct": run.risk_pct,
+        "contract_size": run.contract_size,
+    }
+
+    folds, wf_pass, wf_summary = run_walk_forward(df, strategy_name, params, **run_kwargs)
+    _persist_walk_forward(run, folds, wf_pass, wf_summary)
+
+    rob = run_robustness(
+        df,
+        strategy_name,
+        params,
+        in_sample_end=is_end,
+        oos_start=oos_start,
+        **run_kwargs,
+    )
+    _persist_robustness(run, rob)
+
+    mc_trades = oos_result.trades if len(oos_result.trades) else full_result.trades
+    mc = run_monte_carlo(
+        mc_trades,
+        n_sims=N_MC_SIMS,
+        seed=MC_SEED,
+        initial=run.initial_equity,
+        contract_size=run.contract_size,
+    )
+    mc_pass = evaluate_mc_pass(mc, initial=run.initial_equity)
+    _persist_monte_carlo(run, mc, mc_pass)
+
+    gate = evaluate_decision_gate(
+        is_metrics=is_result.metrics,
+        oos_metrics=oos_result.metrics,
+        wf_pass=wf_pass,
+        param_stable=rob.param_stable,
+        perturb_stable=rob.perturb_stable,
+        cost_pass=rob.cost_pass,
+        mc_pass=mc_pass,
+    )
+    _persist_decision_gate(run, gate)
+
+    ts = pd.to_datetime(df["Datetime"])
+    ctx = Mql5SpecContext(
+        strategy_name=strategy_name,
+        symbol=run.dataset.symbol,
+        timeframe=run.dataset.timeframe,
+        params=params,
+        volume_usable=bool(run.dataset.volume_usable),
+        is_metrics=is_result.metrics,
+        oos_metrics=oos_result.metrics,
+        gate=gate,
+        mc=mc,
+        initial_equity=run.initial_equity,
+        fee=run.fee,
+        commission_per_lot=run.commission_per_lot,
+        spread=run.spread,
+        slippage=run.slippage,
+        risk_pct=run.risk_pct,
+        contract_size=run.contract_size,
+        in_sample_end=is_end,
+        oos_start=oos_start,
+        data_start=str(ts.min().date()),
+        data_end=str(ts.max().date()),
+        param_stable=rob.param_stable,
+        perturb_stable=rob.perturb_stable,
+        cost_pass=rob.cost_pass,
+    )
+    spec_text = build_mql5_spec(ctx)
+    export_dir = Path(settings.MEDIA_ROOT) / "exports"
+    md_path, txt_path = export_mql5_spec(
+        spec_text,
+        gate.status,
+        export_dir,
+        run.dataset.symbol,
+        run.dataset.timeframe,
+        strategy_name,
+    )
+    _persist_exports(run, md_path, txt_path)
 
 
 def execute_run(run_id: int) -> None:
@@ -203,19 +423,17 @@ def execute_run(run_id: int) -> None:
             _persist_result(run, is_result, split="is")
             _persist_result(run, oos_result, split="oos")
             if run.multi_deep:
-                folds, wf_pass, summary = run_walk_forward(
+                _run_deep_pipeline(
+                    run,
                     df,
                     strategy_name,
                     params,
-                    initial_equity=run.initial_equity,
-                    fee=run.fee,
-                    slippage=run.slippage,
-                    commission_per_lot=run.commission_per_lot,
-                    spread=run.spread,
-                    risk_pct=run.risk_pct,
-                    contract_size=run.contract_size,
+                    is_end,
+                    oos_start,
+                    is_result,
+                    oos_result,
+                    full,
                 )
-                _persist_walk_forward(run, folds, wf_pass, summary)
             run.status = BacktestRun.Status.DONE
             run.finished_at = dj_tz.now()
             run.save(update_fields=["status", "finished_at"])

@@ -7,21 +7,34 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.backtests.forms import BacktestRunForm
-from apps.backtests.models import BacktestRun, MetricSet, Trade, WalkForwardFold
+from apps.backtests.models import BacktestRun, DecisionGate, MetricSet, Trade
 from apps.backtests.tasks import create_screening_runs, enqueue_run
 from apps.marketdata.models import Dataset
 
-VALID_TABS = {"overview", "equity", "trades", "splits", "walkforward"}
+VALID_TABS = {
+    "overview",
+    "equity",
+    "trades",
+    "splits",
+    "walkforward",
+    "robustness",
+    "cost",
+    "montecarlo",
+    "gate",
+    "export",
+}
+DEEP_TABS = {"walkforward", "robustness", "cost", "montecarlo", "gate", "export"}
 
 
 def _metric_map(run: BacktestRun) -> dict[str, MetricSet | None]:
     rows = {m.split: m for m in run.metrics.all()}
-    wf_summary = MetricSet.objects.filter(run=run, split="wf", label="summary").first()
     return {
         "full": rows.get("full"),
         "is": rows.get("is"),
         "oos": rows.get("oos"),
-        "wf": wf_summary,
+        "wf": MetricSet.objects.filter(run=run, split="wf", label="summary").first(),
+        "robustness": MetricSet.objects.filter(run=run, split="robustness", label="summary").first(),
+        "mc": MetricSet.objects.filter(run=run, split="mc", label="summary").first(),
     }
 
 
@@ -33,8 +46,65 @@ def _run_tabs(run: BacktestRun) -> list[tuple[str, str]]:
         ("splits", "IS/OOS"),
     ]
     if run.multi_deep:
-        tabs.append(("walkforward", "Walk-forward"))
+        tabs.extend(
+            [
+                ("walkforward", "Walk-forward"),
+                ("robustness", "Robustness"),
+                ("cost", "Cost stress"),
+                ("montecarlo", "Monte Carlo"),
+                ("gate", "Gate"),
+                ("export", "Export"),
+            ]
+        )
     return tabs
+
+
+def _deep_context(run: BacktestRun, metrics: dict) -> dict:
+    rob_summary = metrics.get("robustness")
+    param_rows = run.robustness_rows.filter(kind="param_grid").order_by("label")
+    perturb_rows = run.robustness_rows.filter(kind="ema_perturb").order_by("label")
+    cost_rows = run.robustness_rows.filter(kind="cost_stress").order_by("label")
+    try:
+        gate = run.decision_gate
+    except DecisionGate.DoesNotExist:
+        gate = None
+    exports = list(run.exports.all())
+    mc_rows = list(run.mc_summaries.all())
+    export_preview = ""
+    md = next((e for e in exports if e.kind == "md"), None)
+    if md:
+        try:
+            export_preview = open(md.path, encoding="utf-8").read()[:8000]
+        except OSError:
+            export_preview = ""
+    mc_hist_json = "null"
+    boot = next((m for m in mc_rows if m.mode == "bootstrap"), None)
+    if boot and boot.extras.get("histogram"):
+        import json
+
+        mc_hist_json = json.dumps(boot.extras["histogram"])
+    return {
+        "wf_folds": list(run.wf_folds.all()),
+        "wf_summary": metrics.get("wf"),
+        "rob_summary": rob_summary,
+        "param_rows": param_rows,
+        "perturb_rows": perturb_rows,
+        "cost_rows": cost_rows,
+        "mc_rows": mc_rows,
+        "mc_summary": metrics.get("mc"),
+        "mc_hist_json": mc_hist_json,
+        "gate": gate,
+        "exports": exports,
+        "export_preview": export_preview,
+    }
+
+
+def _resolve_tab(run: BacktestRun, tab: str) -> str:
+    if tab not in VALID_TABS:
+        return "overview"
+    if tab in DEEP_TABS and not run.multi_deep:
+        return "overview"
+    return tab
 
 
 def _enqueue(run_id: int) -> None:
@@ -77,11 +147,7 @@ def run_new(request):
         return render(
             request,
             "backtests/run_new.html",
-            {
-                "page_title": "Run baru",
-                "form": None,
-                "no_dataset": True,
-            },
+            {"page_title": "Run baru", "form": None, "no_dataset": True},
         )
     form = BacktestRunForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -135,11 +201,7 @@ def run_new(request):
     return render(
         request,
         "backtests/run_new.html",
-        {
-            "page_title": "Run baru",
-            "form": form,
-            "no_dataset": False,
-        },
+        {"page_title": "Run baru", "form": form, "no_dataset": False},
     )
 
 
@@ -154,20 +216,10 @@ def run_detail(request, pk):
             {
                 "page_title": f"Screening #{run.pk}",
                 "parent": run,
-                "children": [
-                    {
-                        "run": c,
-                        "metrics": _metric_map(c),
-                    }
-                    for c in children
-                ],
+                "children": [{"run": c, "metrics": _metric_map(c)} for c in children],
             },
         )
-    tab = request.GET.get("tab", "overview")
-    if tab not in VALID_TABS:
-        tab = "overview"
-    if tab == "walkforward" and not run.multi_deep:
-        tab = "overview"
+    tab = _resolve_tab(run, request.GET.get("tab", "overview"))
     metrics = _metric_map(run)
     equity_json = "[]"
     if metrics["full"] and metrics["full"].extras.get("equity_curve"):
@@ -180,30 +232,19 @@ def run_detail(request, pk):
         paginator = Paginator(run.trades.order_by("-entry_time"), 50)
         page_obj = paginator.get_page(request.GET.get("page"))
 
-    split_rows = [
-        ("full", metrics["full"]),
-        ("is", metrics["is"]),
-        ("oos", metrics["oos"]),
-    ]
-    tabs = _run_tabs(run)
-    wf_folds = list(run.wf_folds.all()) if run.multi_deep else []
-    wf_summary = metrics.get("wf")
-    return render(
-        request,
-        "backtests/run_detail.html",
-        {
-            "page_title": f"Run #{run.pk}",
-            "run": run,
-            "metrics": metrics,
-            "active_tab": tab,
-            "equity_json": equity_json,
-            "page_obj": page_obj,
-            "split_rows": split_rows,
-            "tabs": tabs,
-            "wf_folds": wf_folds,
-            "wf_summary": wf_summary,
-        },
-    )
+    ctx = {
+        "page_title": f"Run #{run.pk}",
+        "run": run,
+        "metrics": metrics,
+        "active_tab": tab,
+        "equity_json": equity_json,
+        "page_obj": page_obj,
+        "split_rows": [("full", metrics["full"]), ("is", metrics["is"]), ("oos", metrics["oos"])],
+        "tabs": _run_tabs(run),
+    }
+    if run.multi_deep:
+        ctx.update(_deep_context(run, metrics))
+    return render(request, "backtests/run_detail.html", ctx)
 
 
 @login_required
@@ -213,14 +254,10 @@ def run_partial(request, pk, tab):
     run = get_object_or_404(BacktestRun.objects.select_related("dataset"), pk=pk)
     if run.strategy_name in {"*", "all"}:
         raise Http404
-    if tab == "walkforward" and not run.multi_deep:
+    if tab in DEEP_TABS and not run.multi_deep:
         raise Http404
     metrics = _metric_map(run)
-    ctx = {
-        "run": run,
-        "metrics": metrics,
-        "active_tab": tab,
-    }
+    ctx = {"run": run, "metrics": metrics, "active_tab": tab}
     if tab == "trades":
         paginator = Paginator(run.trades.order_by("-entry_time"), 50)
         ctx["page_obj"] = paginator.get_page(request.GET.get("page"))
@@ -231,9 +268,8 @@ def run_partial(request, pk, tab):
         if metrics["full"] and metrics["full"].extras.get("equity_curve"):
             curve = metrics["full"].extras["equity_curve"]
         ctx["equity_json"] = json.dumps(curve)
-    if tab == "walkforward":
-        ctx["wf_folds"] = list(run.wf_folds.all())
-        ctx["wf_summary"] = metrics.get("wf")
+    if run.multi_deep:
+        ctx.update(_deep_context(run, metrics))
     return render(request, f"backtests/partials/tab_{tab}.html", ctx)
 
 
@@ -307,6 +343,11 @@ def compare(request):
         metrics = _metric_map(run)
         is_m = metrics["is"]
         oos_m = metrics["oos"]
+        gate = None
+        try:
+            gate = run.decision_gate
+        except DecisionGate.DoesNotExist:
+            pass
         rows.append(
             {
                 "run": run,
@@ -318,6 +359,7 @@ def compare(request):
                 "oos_return": oos_m.total_return if oos_m else None,
                 "oos_dd": oos_m.max_drawdown if oos_m else None,
                 "oos_trades": oos_m.trades if oos_m else None,
+                "gate_status": gate.status if gate else None,
             }
         )
     rows.sort(key=lambda r: (r["oos_sharpe"] is None, -(r["oos_sharpe"] or -999)))

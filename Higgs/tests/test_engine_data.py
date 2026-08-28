@@ -65,6 +65,11 @@ class EngineDataTests(unittest.TestCase):
             "engine/data.py",
             "engine/indicators.py",
             "engine/registry.py",
+            "engine/walk_forward.py",
+            "engine/robustness.py",
+            "engine/monte_carlo.py",
+            "engine/decision_gate.py",
+            "engine/mql5_export.py",
         ):
             tree = ast.parse((ENGINE_ROOT / rel).read_text(encoding="utf-8"))
             for node in ast.walk(tree):

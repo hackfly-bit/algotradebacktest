@@ -1,0 +1,28 @@
+<section class="panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Decision gate</h2>
+    <p class="panel-subtitle">6 gate notebook · status FAIL / FRAGILE / ACCEPTABLE / ROBUST</p>
+  </div>
+  <div class="panel-body flex flex-col gap-3">
+    {% if gate %}
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="badge {% if gate.status == 'ROBUST' or gate.status == 'ACCEPTABLE' %}badge-profit{% elif gate.status == 'FRAGILE' %}badge-warn{% else %}badge-loss{% endif %}">
+        {{ gate.status }}
+      </span>
+      <span class="text-[12px] text-ink/70">{{ gate.n_pass }}/6 gate lulus · Implement MQL5: {{ gate.implement_mql5|yesno:"YES,NO" }}</span>
+    </div>
+    <table class="data-table data-table-compact max-w-lg">
+      <tbody>
+        <tr><td>In-sample</td><td class="text-right">{% include "backtests/partials/gate_badge.html" with pass=gate.in_sample only %}</td></tr>
+        <tr><td>Out-of-sample</td><td class="text-right">{% include "backtests/partials/gate_badge.html" with pass=gate.out_of_sample only %}</td></tr>
+        <tr><td>Walk-forward</td><td class="text-right">{% include "backtests/partials/gate_badge.html" with pass=gate.walk_forward only %}</td></tr>
+        <tr><td>Parameter stability</td><td class="text-right">{% include "backtests/partials/gate_badge.html" with pass=gate.parameter_stability only %}</td></tr>
+        <tr><td>Cost stress</td><td class="text-right">{% include "backtests/partials/gate_badge.html" with pass=gate.cost_stress only %}</td></tr>
+        <tr><td>Monte Carlo</td><td class="text-right">{% include "backtests/partials/gate_badge.html" with pass=gate.monte_carlo only %}</td></tr>
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-sm text-ink/60">Gate belum dihitung. Aktifkan MULTI_DEEP dan jalankan ulang run.</p>
+    {% endif %}
+  </div>
+</section>

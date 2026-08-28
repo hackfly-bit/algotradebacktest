@@ -27,6 +27,6 @@ Taste-Skill + `docs/DESIGN.md`. Density 8–9. Ponytail: jangan over-build; jang
 
 ## Fase
 
-Fase 8 (walk-forward tab + WalkForwardFold) selesai. Berikutnya Fase 9: robustness + cost stress.
+Fase 8–12 selesai (robustness, MC, gate, export MQL5, README). Konversi notebook → Higgs complete per CONVERSION_PLAN.
 
 Paritas: `prepare_dataset.bat` → ingest → screening `*` → `/compare/`.

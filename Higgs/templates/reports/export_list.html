@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mx-auto flex max-w-[1200px] flex-col gap-3">
+  <p class="breadcrumb">Ekspor / <span>Spec MQL5</span></p>
+  <div class="panel">
+    <div class="panel-header">
+      <h1 class="panel-title">File export MQL5</h1>
+      <p class="panel-subtitle">Generated dari run dengan MULTI_DEEP</p>
+    </div>
+    <div class="panel-body-flush overflow-x-auto">
+      {% if files %}
+      <table class="data-table data-table-compact">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Run</th>
+            <th>Strategi</th>
+            <th>Tipe</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in files %}
+          <tr>
+            <td class="font-mono text-[11px]">{{ f.filename }}</td>
+            <td><a href="{% url 'backtests:run_detail' f.run.pk %}" class="text-accent">#{{ f.run.pk }}</a></td>
+            <td>{{ f.run.strategy_name }}</td>
+            <td><span class="badge badge-neutral">{{ f.kind }}</span></td>
+            <td class="text-right"><a href="{% url 'reports:export_download' f.pk %}" class="text-[12px] text-accent">Unduh</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="px-3 py-6 text-sm text-ink/60">Belum ada export. Jalankan run dengan MULTI_DEEP aktif.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

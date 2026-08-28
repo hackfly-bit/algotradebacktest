@@ -51,6 +51,16 @@
       {% include "backtests/partials/tab_splits.html" %}
     {% elif active_tab == "walkforward" %}
       {% include "backtests/partials/tab_walkforward.html" %}
+    {% elif active_tab == "robustness" %}
+      {% include "backtests/partials/tab_robustness.html" %}
+    {% elif active_tab == "cost" %}
+      {% include "backtests/partials/tab_cost.html" %}
+    {% elif active_tab == "montecarlo" %}
+      {% include "backtests/partials/tab_montecarlo.html" %}
+    {% elif active_tab == "gate" %}
+      {% include "backtests/partials/tab_gate.html" %}
+    {% elif active_tab == "export" %}
+      {% include "backtests/partials/tab_export.html" %}
     {% endif %}
   </div>
 </div>
