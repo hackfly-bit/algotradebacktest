@@ -27,6 +27,6 @@ Taste-Skill + `docs/DESIGN.md`. Density 8–9. Ponytail: jangan over-build; jang
 
 ## Fase
 
-Fase 5 (backtester + metrics) selesai. Fase 2b (bootstrap HuggingFace) selesai. Berikutnya Fase 6: persistensi `BacktestRun` + `django.tasks` worker.
+Fase 6 (persistensi BacktestRun + task) selesai. Django 6.1 belum punya DatabaseBackend untuk tasks — memakai ImmediateBackend. Berikutnya Fase 7: UI screening IS/OOS (form New run, list, detail tab 1–4, Compare, HTMX status).
 
-Paritas penuh (`tests/test_engine_parity.py`) membutuhkan `XAUUSD_2009_2026_M1.csv` — jalankan `prepare_dataset.bat` di root repo.
+Paritas penuh: `prepare_dataset.bat` lalu `py manage.py ingest_dataset ..\XAUUSD_2009_2026_M1.csv` dan `pytest tests/test_engine_parity.py`.
