@@ -17,18 +17,56 @@ import engine.strategies  # noqa: F401
 from apps.marketdata.models import Dataset
 from apps.strategies.forms import StrategyDefinitionForm, StrategyImportForm
 from apps.strategies.models import StrategyDefinition
+from apps.strategies.presets import empty_definition, presets_for_json
 from apps.strategies.registry_bridge import sync_custom_strategies
 from apps.strategies.services import load_builtin_templates, list_builtin_names
+from apps.strategies.validate_view import builder_validate  # noqa: F401 — re-export for urls
 from engine.backtester import apply_strategy, run_backtest
 from engine.data import slice_df
 from engine.indicators import add_indicators
-from engine.registry import DEFAULT_PARAMS, STRATEGY_SPECS, get_strategy_spec, list_strategies
+from engine.registry import DEFAULT_PARAMS, STRATEGY_SPECS, list_strategies
 from engine.rule_spec import build_logic_spec
 
 import pandas as pd
 
 SHORT_STRATEGIES = {"trend_breakout_by_gemini", "momentum_squeeze_by_kimi"}
 VOLUME_STRATEGIES = {"ema_rsi_volume"}
+
+
+def _editor_context(form, *, is_new: bool, strategy=None, request=None, import_form=None) -> dict:
+    templates = load_builtin_templates()
+    if strategy and strategy.definition_json:
+        defn = strategy.definition_json
+    elif form.data.get("definition_raw"):
+        try:
+            defn = json.loads(form.data["definition_raw"])
+        except json.JSONDecodeError:
+            defn = empty_definition()
+    elif form.initial.get("template_key") and form.initial["template_key"] in templates:
+        defn = templates[form.initial["template_key"]]
+    elif getattr(form, "cleaned_data", None) and form.cleaned_data.get("definition_json"):
+        defn = form.cleaned_data["definition_json"]
+    else:
+        key = (request.GET.get("template") if request else "") or ""
+        defn = templates.get(key) or empty_definition()
+    forks = []
+    parent = None
+    if strategy:
+        forks = list(strategy.forks.order_by("-created_at")[:8])
+        parent = strategy.parent
+    return {
+        "page_title": "Strategi baru" if is_new else f"Edit {strategy.label}",
+        "form": form,
+        "import_form": import_form or StrategyImportForm(),
+        "is_new": is_new,
+        "strategy": strategy,
+        "definition_json": json.dumps(defn),
+        "presets_json": json.dumps(presets_for_json()),
+        "logic_spec_preview": json.dumps(build_logic_spec(defn) if isinstance(defn, dict) else ""),
+        "forks": forks,
+        "parent": parent,
+        "validate_url": reverse("strategies:builder_validate"),
+    }
 
 
 def _preview(spec: str, limit: int = 140) -> str:
@@ -125,7 +163,13 @@ def strategy_detail(request, slug):
 
 @login_required
 def builder_list(request):
-    custom = StrategyDefinition.objects.exclude(status=StrategyDefinition.Status.ARCHIVED).order_by("-updated_at")
+    qs = StrategyDefinition.objects.exclude(status=StrategyDefinition.Status.ARCHIVED)
+    owner = request.GET.get("owner", "mine")
+    if owner == "mine":
+        qs = qs.filter(created_by=request.user)
+    elif owner == "others":
+        qs = qs.exclude(created_by=request.user)
+    custom = qs.order_by("-updated_at")
     templates = load_builtin_templates()
     return render(
         request,
@@ -134,6 +178,7 @@ def builder_list(request):
             "page_title": "Strategy Builder",
             "strategies": custom,
             "template_count": len(templates),
+            "owner_filter": owner,
         },
     )
 
@@ -158,12 +203,7 @@ def builder_new(request):
     return render(
         request,
         "strategies/builder/edit.html",
-        {
-            "page_title": "Strategi baru",
-            "form": form,
-            "import_form": StrategyImportForm(),
-            "is_new": True,
-        },
+        _editor_context(form, is_new=True, request=request, import_form=StrategyImportForm()),
     )
 
 
@@ -185,6 +225,22 @@ def builder_edit(request, pk):
         )
         messages.success(request, "Duplikat dibuat sebagai draft.")
         return redirect("strategies:builder_edit", pk=clone.pk)
+    if request.method == "POST" and request.POST.get("action") == "new_version":
+        ver = StrategyDefinition.objects.filter(parent=obj).count() + 2
+        clone = StrategyDefinition.objects.create(
+            slug=f"custom_v{ver}_{uuid.uuid4().hex[:6]}",
+            label=f"{obj.label} v{ver}",
+            description=obj.description,
+            schema_version=obj.schema_version,
+            definition_json=obj.definition_json,
+            allow_short=obj.allow_short,
+            status=StrategyDefinition.Status.DRAFT,
+            logic_spec=obj.logic_spec,
+            parent=obj,
+            created_by=request.user,
+        )
+        messages.success(request, f"Versi baru v{ver} dibuat sebagai draft.")
+        return redirect("strategies:builder_edit", pk=clone.pk)
 
     form = StrategyDefinitionForm(request.POST or None, instance=obj)
     if request.method == "POST" and request.POST.get("action", "save") == "save" and form.is_valid():
@@ -195,13 +251,7 @@ def builder_edit(request, pk):
     return render(
         request,
         "strategies/builder/edit.html",
-        {
-            "page_title": f"Edit {obj.label}",
-            "form": form,
-            "import_form": StrategyImportForm(),
-            "strategy": obj,
-            "is_new": False,
-        },
+        _editor_context(form, is_new=False, strategy=obj, request=request, import_form=StrategyImportForm()),
     )
 
 
@@ -269,34 +319,46 @@ def builder_preview(request, pk):
     obj = get_object_or_404(StrategyDefinition, pk=pk)
     dataset_id = request.GET.get("dataset")
     try:
-        df = _load_preview_df(int(dataset_id) if dataset_id else None)
+        df = _load_preview_df(int(dataset_id) if dataset_id else None, max_bars=300)
     except Http404:
         return render(
             request,
             "strategies/builder/preview.html",
-            {"error": "Dataset tidak tersedia.", "strategy": obj, "points_json": "[]", "datasets": []},
+            {
+                "error": "Dataset tidak tersedia.",
+                "strategy": obj,
+                "equity_json": "[]",
+                "markers_json": "[]",
+                "datasets": [],
+            },
         )
     sync_custom_strategies()
-    signals = apply_strategy(df, obj.slug, {"volume_usable": bool(getattr(df, "attrs", {}).get("volume_usable", False))})
-    entries = signals[signals["signal"] != 0].tail(80)
-    points = []
-    for _, row in entries.iterrows():
-        points.append(
-            {
-                "ts": pd.Timestamp(row["Datetime"]).isoformat(),
-                "close": float(row["Close"]),
-                "signal": int(row["signal"]),
-            }
-        )
+    ds = Dataset.objects.filter(pk=dataset_id).first() if dataset_id else Dataset.objects.order_by("-created_at").first()
+    volume_usable = bool(ds.volume_usable) if ds else False
+    params = {"volume_usable": volume_usable}
+    for key, spec in (obj.definition_json.get("params") or {}).items():
+        params[key] = spec.get("default")
+    signals = apply_strategy(df, obj.slug, params)
+    equity = []
+    markers = []
+    for _, row in signals.iterrows():
+        ts = pd.Timestamp(row["Datetime"]).isoformat()
+        equity.append({"ts": ts, "close": float(row["Close"]), "high": float(row["High"]), "low": float(row["Low"])})
+        sig = int(row["signal"])
+        if sig != 0:
+            markers.append({"ts": ts, "close": float(row["Close"]), "signal": sig})
     datasets = Dataset.objects.order_by("-created_at")[:10]
     return render(
         request,
         "strategies/builder/preview.html",
         {
             "strategy": obj,
-            "points_json": json.dumps(points),
+            "equity_json": json.dumps(equity),
+            "markers_json": json.dumps(markers),
             "datasets": datasets,
-            "selected_dataset": dataset_id,
+            "selected_dataset": str(dataset_id) if dataset_id else (str(ds.pk) if ds else ""),
+            "long_count": sum(1 for m in markers if m["signal"] == 1),
+            "short_count": sum(1 for m in markers if m["signal"] == -1),
         },
     )
 

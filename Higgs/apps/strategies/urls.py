@@ -14,5 +14,6 @@ urlpatterns = [
     path("builder/<int:pk>/preview/", views.builder_preview, name="builder_preview"),
     path("builder/<int:pk>/quick-test/", views.builder_quick_test, name="builder_quick_test"),
     path("builder/import/", views.builder_import, name="builder_import"),
+    path("builder/validate/", views.builder_validate, name="builder_validate"),
     path("<slug:slug>/", views.strategy_detail, name="strategy_detail"),
 ]

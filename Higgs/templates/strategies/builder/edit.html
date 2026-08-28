@@ -1,84 +1,473 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="mx-auto flex max-w-[1200px] flex-col gap-3">
+<div
+  class="mx-auto flex max-w-[1400px] flex-col gap-3"
+  x-data="strategyBuilder({{ definition_json|safe }}, {{ presets_json|safe }}, '{{ validate_url }}')"
+  x-init="init()"
+>
   <p class="breadcrumb">
     <a href="{% url 'strategies:builder_list' %}">Builder</a> /
     {% if is_new %}Baru{% else %}{{ strategy.label }}{% endif %}
   </p>
 
-  <div class="grid gap-3 lg:grid-cols-3">
-    <section class="panel lg:col-span-2">
-      <div class="panel-header">
-        <h2 class="panel-title">{% if is_new %}Strategi baru{% else %}Edit strategi{% endif %}</h2>
-        <p class="panel-subtitle">Definisi JSON v1 · tanpa coding Python</p>
-      </div>
-      <div class="panel-body">
-        <form method="post" class="space-y-3">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="save">
-          {% if form.non_field_errors %}<p class="text-sm text-loss">{{ form.non_field_errors.0 }}</p>{% endif %}
-          <div class="grid gap-3 sm:grid-cols-2">
-            <label class="block text-[12px] font-medium">{{ form.label.label }}{{ form.label }}{% if form.label.errors %}<span class="text-loss">{{ form.label.errors.0 }}</span>{% endif %}</label>
-            <label class="block text-[12px] font-medium">{{ form.slug.label }}{{ form.slug }}{% if form.slug.errors %}<span class="text-loss">{{ form.slug.errors.0 }}</span>{% endif %}</label>
-            <label class="block text-[12px] font-medium">{{ form.status.label }}{{ form.status }}</label>
-            <label class="flex items-center gap-2 text-[12px] font-medium">{{ form.allow_short }} {{ form.allow_short.label }}</label>
-          </div>
-          {% if is_new %}
-          <label class="block text-[12px] font-medium">{{ form.template_key.label }}{{ form.template_key }}</label>
-          {% endif %}
-          <label class="block text-[12px] font-medium">{{ form.description.label }}{{ form.description }}</label>
-          <label class="block text-[12px] font-medium">{{ form.definition_raw.label }}{{ form.definition_raw }}{% if form.definition_raw.errors %}<span class="text-loss">{{ form.definition_raw.errors.0 }}</span>{% endif %}</label>
-          <p class="text-[11px] text-ink/55">Operator: gt, lt, gte, lte, volume_filter, touch_in_last_n, squeeze, rising, crosses_above. Rolling wajib shift ≥ 1.</p>
-          <button type="submit" class="btn-primary">Simpan</button>
-        </form>
-      </div>
-    </section>
+  <form method="post" class="contents" @submit="syncJson()">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save">
+    <textarea name="definition_raw" x-ref="raw" class="hidden" x-text="JSON.stringify(defn, null, 2)"></textarea>
+    {% if is_new %}<input type="hidden" name="template_key" value="">
+    {% else %}
+    {# keep django form fields for slug/status when editing via visual #}
+    {% endif %}
 
-    <aside class="flex flex-col gap-3">
-      {% if not is_new %}
-      <section class="panel">
-        <div class="panel-header"><h2 class="panel-title">Aksi</h2></div>
-        <div class="panel-body flex flex-col gap-2">
-          <a href="{% url 'strategies:builder_preview' strategy.pk %}" class="btn-ghost-sm">Preview sinyal</a>
-          <a href="{% url 'strategies:builder_export' strategy.pk %}" class="btn-ghost-sm">Export JSON</a>
-          <a href="{% url 'strategies:strategy_detail' strategy.slug %}" class="btn-ghost-sm">Lihat spec</a>
-          <form method="post">{% csrf_token %}<input type="hidden" name="action" value="duplicate"><button class="btn-ghost-sm w-full">Duplikat</button></form>
-          <form method="post" action="{% url 'strategies:builder_archive' strategy.pk %}">{% csrf_token %}<button class="btn-ghost-sm w-full text-loss">Arsipkan</button></form>
+    {% if form.non_field_errors %}
+    <p class="text-sm text-loss">{{ form.non_field_errors.0 }}</p>
+    {% endif %}
+
+    <div class="grid gap-3 xl:grid-cols-12">
+      {# Presets #}
+      <aside class="xl:col-span-3 flex flex-col gap-3">
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Preset blocks</h2>
+            <p class="panel-subtitle">Klik untuk sisipkan ke LONG</p>
+          </div>
+          <div class="panel-body flex flex-col gap-1.5">
+            <template x-for="p in presets" :key="p.id">
+              <button type="button" class="btn-ghost-sm w-full justify-start text-left" @click="addPreset(p)">
+                <span class="font-medium" x-text="p.label"></span>
+                <span class="mt-0.5 block text-[10px] font-normal text-ink/55" x-text="p.description"></span>
+              </button>
+            </template>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2 class="panel-title">Validasi</h2></div>
+          <div class="panel-body space-y-2 text-[12px]">
+            <button type="button" class="btn-ghost-sm w-full" @click="validateNow()">Cek schema</button>
+            <p class="font-mono text-[11px]" :class="validationOk === true ? 'text-profit' : (validationOk === false ? 'text-loss' : 'text-ink/55')" x-text="validationMsg"></p>
+            <pre class="max-h-40 overflow-auto whitespace-pre-wrap rounded-[6px] border border-black/10 bg-canvas/40 p-2 font-mono text-[10px] dark:border-white/10" x-text="logicSpec"></pre>
+          </div>
+        </section>
+      </aside>
+
+      {# Main editor #}
+      <section class="panel xl:col-span-6">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">{% if is_new %}Strategi baru{% else %}Edit visual{% endif %}</h2>
+            <p class="panel-subtitle">Rule builder · tanpa JSON manual</p>
+          </div>
+          <div class="flex gap-1">
+            <button type="button" class="btn-ghost-sm" :class="tab==='visual' && 'bg-accent/12 text-accent'" @click="tab='visual'">Visual</button>
+            <button type="button" class="btn-ghost-sm" :class="tab==='json' && 'bg-accent/12 text-accent'" @click="tab='json'; syncJson()">JSON</button>
+          </div>
+        </div>
+        <div class="panel-body space-y-3">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="block text-[12px] font-medium">Label
+              <input name="label" class="field-input" x-model="meta.label" required>
+            </label>
+            <label class="block text-[12px] font-medium">Slug
+              <input name="slug" class="field-input" x-model="meta.slug" placeholder="my_breakout" {% if not is_new %}readonly{% endif %}>
+            </label>
+            <label class="block text-[12px] font-medium">Status
+              <select name="status" class="field-input" x-model="meta.status">
+                <option value="draft">draft</option>
+                <option value="active">active</option>
+                <option value="archived">archived</option>
+              </select>
+            </label>
+            <label class="flex items-center gap-2 text-[12px] font-medium pt-6">
+              <input type="checkbox" name="allow_short" value="true" class="rounded border-black/20" x-model="defn.allow_short" @change="toggleShort()">
+              Allow short
+            </label>
+          </div>
+          <label class="block text-[12px] font-medium">Deskripsi
+            <textarea name="description" class="field-input" rows="2" x-model="meta.description"></textarea>
+          </label>
+
+          <div x-show="tab==='visual'" class="space-y-4">
+            {# LONG #}
+            <div>
+              <div class="mb-2 flex items-center justify-between">
+                <h3 class="text-[12px] font-semibold">LONG rules
+                  <select class="field-input !mt-0 ml-2 inline-block w-auto text-[11px]" x-model="defn.long.combine">
+                    <option value="and">AND</option>
+                    <option value="or">OR</option>
+                  </select>
+                </h3>
+                <button type="button" class="btn-ghost-sm" @click="addCondition('long')">+ Kondisi</button>
+              </div>
+              <template x-for="(c, i) in defn.long.conditions" :key="'l'+i">
+                <div class="mb-2 rounded-[6px] border border-black/10 p-2 dark:border-white/10">
+                  <div class="mb-1 flex justify-between">
+                    <select class="field-input !mt-0 w-auto text-[11px]" x-model="c._ui" @change="applyUiType(c)">
+                      <option value="compare">Compare</option>
+                      <option value="volume_filter">Volume filter</option>
+                      <option value="squeeze">Squeeze</option>
+                      <option value="rising">Rising</option>
+                      <option value="falling">Falling</option>
+                      <option value="touch_in_last_n">Touch last N</option>
+                    </select>
+                    <button type="button" class="btn-ghost-sm text-loss" @click="defn.long.conditions.splice(i,1)">Hapus</button>
+                  </div>
+                  <template x-if="c._ui==='compare'">
+                    <div class="grid gap-1 sm:grid-cols-5">
+                      <select class="field-input !mt-0 text-[11px]" x-model="c._leftKind" @change="rebuildCompare(c)"><option value="col">Col</option><option value="ema">EMA</option><option value="rolling_max">RollMax</option><option value="rolling_min">RollMin</option><option value="param">$param</option><option value="literal">Literal</option></select>
+                      <input class="field-input !mt-0 text-[11px]" x-model="c._leftVal" @change="rebuildCompare(c)" placeholder="Close / 20 / lookback">
+                      <select class="field-input !mt-0 text-[11px]" x-model="c.op" @change="rebuildCompare(c)"><option>gt</option><option>lt</option><option>gte</option><option>lte</option><option>eq</option><option>crosses_above</option><option>crosses_below</option></select>
+                      <select class="field-input !mt-0 text-[11px]" x-model="c._rightKind" @change="rebuildCompare(c)"><option value="col">Col</option><option value="ema">EMA</option><option value="rolling_max">RollMax</option><option value="rolling_min">RollMin</option><option value="param">$param</option><option value="literal">Literal</option></select>
+                      <input class="field-input !mt-0 text-[11px]" x-model="c._rightVal" @change="rebuildCompare(c)" placeholder="High / $lookback">
+                    </div>
+                  </template>
+                  <template x-if="c._ui==='squeeze'">
+                    <input class="field-input !mt-0 text-[11px]" x-model="c.lookback" placeholder="lookback $lookback or 20">
+                  </template>
+                  <template x-if="c._ui==='rising' || c._ui==='falling'">
+                    <div class="grid gap-1 sm:grid-cols-2">
+                      <input class="field-input !mt-0 text-[11px]" x-model="c._refCol" @change="c.ref={col:c._refCol}" placeholder="adx_14">
+                      <input class="field-input !mt-0 text-[11px]" x-model="c.bars" placeholder="bars $adx_rise">
+                    </div>
+                  </template>
+                  <template x-if="c._ui==='touch_in_last_n'">
+                    <div class="grid gap-1 sm:grid-cols-3">
+                      <input class="field-input !mt-0 text-[11px]" x-model="c.col" placeholder="Low">
+                      <input class="field-input !mt-0 text-[11px]" x-model="c._refEma" @change="c.ref={fn:'ema',period:c._refEma}" placeholder="$ema_fast">
+                      <input class="field-input !mt-0 text-[11px]" x-model="c.bars" placeholder="$pull_bars">
+                    </div>
+                  </template>
+                </div>
+              </template>
+              <p class="text-[11px] text-ink/50" x-show="!defn.long.conditions.length">Belum ada kondisi. Tambah atau pilih preset.</p>
+            </div>
+
+            {# SHORT #}
+            <div x-show="defn.allow_short">
+              <div class="mb-2 flex items-center justify-between">
+                <h3 class="text-[12px] font-semibold">SHORT rules
+                  <select class="field-input !mt-0 ml-2 inline-block w-auto text-[11px]" x-model="defn.short.combine">
+                    <option value="and">AND</option>
+                    <option value="or">OR</option>
+                  </select>
+                </h3>
+                <button type="button" class="btn-ghost-sm" @click="addCondition('short')">+ Kondisi</button>
+              </div>
+              <template x-for="(c, i) in (defn.short && defn.short.conditions) || []" :key="'s'+i">
+                <div class="mb-2 rounded-[6px] border border-black/10 p-2 dark:border-white/10">
+                  <div class="mb-1 flex justify-between">
+                    <select class="field-input !mt-0 w-auto text-[11px]" x-model="c._ui" @change="applyUiType(c)">
+                      <option value="compare">Compare</option>
+                      <option value="volume_filter">Volume filter</option>
+                      <option value="squeeze">Squeeze</option>
+                      <option value="rising">Rising</option>
+                      <option value="falling">Falling</option>
+                      <option value="touch_in_last_n">Touch last N</option>
+                    </select>
+                    <button type="button" class="btn-ghost-sm text-loss" @click="defn.short.conditions.splice(i,1)">Hapus</button>
+                  </div>
+                  <template x-if="c._ui==='compare'">
+                    <div class="grid gap-1 sm:grid-cols-5">
+                      <select class="field-input !mt-0 text-[11px]" x-model="c._leftKind" @change="rebuildCompare(c)"><option value="col">Col</option><option value="ema">EMA</option><option value="rolling_max">RollMax</option><option value="rolling_min">RollMin</option><option value="param">$param</option><option value="literal">Literal</option></select>
+                      <input class="field-input !mt-0 text-[11px]" x-model="c._leftVal" @change="rebuildCompare(c)">
+                      <select class="field-input !mt-0 text-[11px]" x-model="c.op" @change="rebuildCompare(c)"><option>gt</option><option>lt</option><option>gte</option><option>lte</option><option>eq</option></select>
+                      <select class="field-input !mt-0 text-[11px]" x-model="c._rightKind" @change="rebuildCompare(c)"><option value="col">Col</option><option value="ema">EMA</option><option value="rolling_max">RollMax</option><option value="rolling_min">RollMin</option><option value="param">$param</option><option value="literal">Literal</option></select>
+                      <input class="field-input !mt-0 text-[11px]" x-model="c._rightVal" @change="rebuildCompare(c)">
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+
+            {# EXIT #}
+            <div class="grid gap-2 sm:grid-cols-2">
+              <label class="text-[12px] font-medium">SL ATR
+                <input class="field-input" x-model="defn.exit.sl_atr" placeholder="$atr_sl">
+              </label>
+              <label class="text-[12px] font-medium">TP ATR
+                <input class="field-input" x-model="defn.exit.tp_atr" placeholder="$atr_tp">
+              </label>
+            </div>
+          </div>
+
+          <div x-show="tab==='json'">
+            <textarea class="field-input font-mono text-[11px]" rows="18" x-model="jsonText" @change="loadFromJson()"></textarea>
+          </div>
+
+          <button type="submit" class="btn-primary" @click="syncJson()">Simpan</button>
         </div>
       </section>
-      <section class="panel" id="quick-test-panel">
-        <div class="panel-header"><h2 class="panel-title">Quick test</h2></div>
-        <div class="panel-body text-[12px]">
-          <button type="button" class="btn-primary w-full" id="quick-test-btn" data-url="{% url 'strategies:builder_quick_test' strategy.pk %}">Jalankan mini backtest</button>
-          <pre id="quick-test-out" class="mt-2 whitespace-pre-wrap font-mono text-[11px] text-ink/70"></pre>
-        </div>
-      </section>
-      {% endif %}
-      <section class="panel">
-        <div class="panel-header"><h2 class="panel-title">Import JSON</h2></div>
-        <div class="panel-body">
-          <form method="post" action="{% url 'strategies:builder_import' %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            {{ import_form.file }}
-            <input name="slug" class="field-input mt-2 text-[12px]" placeholder="slug import">
-            <button class="btn-ghost-sm mt-2">Import</button>
-          </form>
-        </div>
-      </section>
-    </aside>
-  </div>
+
+      {# Params + actions #}
+      <aside class="xl:col-span-3 flex flex-col gap-3">
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Parameters</h2>
+            <button type="button" class="btn-ghost-sm" @click="addParam()">+</button>
+          </div>
+          <div class="panel-body space-y-2">
+            <template x-for="(p, key) in Object.entries(defn.params || {})" :key="p[0]">
+              <div class="rounded-[6px] border border-black/10 p-2 text-[11px] dark:border-white/10">
+                <div class="mb-1 flex justify-between gap-1">
+                  <input class="field-input !mt-0 font-mono text-[11px]" :value="p[0]" @change="renameParam(p[0], $event.target.value)">
+                  <button type="button" class="text-loss" @click="deleteParam(p[0])">×</button>
+                </div>
+                <div class="grid grid-cols-2 gap-1">
+                  <select class="field-input !mt-0 text-[11px]" x-model="defn.params[p[0]].type"><option>int</option><option>float</option><option>bool</option></select>
+                  <input class="field-input !mt-0 text-[11px]" x-model="defn.params[p[0]].default" placeholder="default">
+                  <input class="field-input !mt-0 text-[11px]" x-model="defn.params[p[0]].min" placeholder="min">
+                  <input class="field-input !mt-0 text-[11px]" x-model="defn.params[p[0]].max" placeholder="max">
+                </div>
+                <label class="mt-1 flex items-center gap-1"><input type="checkbox" class="rounded border-black/20" x-model="defn.params[p[0]].optimizable"> optimizable</label>
+              </div>
+            </template>
+          </div>
+        </section>
+
+        {% if not is_new %}
+        <section class="panel">
+          <div class="panel-header"><h2 class="panel-title">Aksi</h2></div>
+          <div class="panel-body flex flex-col gap-2">
+            <a href="{% url 'strategies:builder_preview' strategy.pk %}" class="btn-ghost-sm">Preview OHLC</a>
+            <a href="{% url 'strategies:builder_export' strategy.pk %}" class="btn-ghost-sm">Export JSON</a>
+            <button type="submit" name="action" value="duplicate" class="btn-ghost-sm">Duplikat</button>
+            <button type="submit" name="action" value="new_version" class="btn-ghost-sm">Versi baru</button>
+            <button type="button" class="btn-primary" id="quick-test-btn" data-url="{% url 'strategies:builder_quick_test' strategy.pk %}">Quick test</button>
+            <pre id="quick-test-out" class="whitespace-pre-wrap font-mono text-[11px] text-ink/70"></pre>
+          </div>
+        </section>
+        <form method="post" action="{% url 'strategies:builder_archive' strategy.pk %}" class="panel">
+          {% csrf_token %}
+          <div class="panel-body">
+            <button class="btn-ghost-sm w-full text-loss">Arsipkan</button>
+          </div>
+        </form>
+        {% if parent %}
+        <section class="panel">
+          <div class="panel-header"><h2 class="panel-title">Versi</h2></div>
+          <div class="panel-body text-[12px]">
+            <p>Parent: <a class="text-accent" href="{% url 'strategies:builder_edit' parent.pk %}">{{ parent.label }}</a></p>
+          </div>
+        </section>
+        {% endif %}
+        {% if forks %}
+        <section class="panel">
+          <div class="panel-header"><h2 class="panel-title">Forks</h2></div>
+          <div class="panel-body space-y-1 text-[12px]">
+            {% for f in forks %}
+            <a class="block text-accent" href="{% url 'strategies:builder_edit' f.pk %}">{{ f.label }} · {{ f.status }}</a>
+            {% endfor %}
+          </div>
+        </section>
+        {% endif %}
+        {% endif %}
+
+        <section class="panel">
+          <div class="panel-header"><h2 class="panel-title">Import JSON</h2></div>
+          <div class="panel-body">
+            <form method="post" action="{% url 'strategies:builder_import' %}" enctype="multipart/form-data">
+              {% csrf_token %}
+              {{ import_form.file }}
+              <input name="slug" class="field-input mt-2 text-[12px]" placeholder="slug import">
+              <button class="btn-ghost-sm mt-2">Import</button>
+            </form>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </form>
 </div>
-{% if not is_new %}
+
 <script>
+function strategyBuilder(initial, presets, validateUrl) {
+  return {
+    defn: initial,
+    presets,
+    validateUrl,
+    tab: 'visual',
+    jsonText: '',
+    validationOk: null,
+    validationMsg: 'Belum divalidasi',
+    logicSpec: {{ logic_spec_preview|safe }},
+    meta: {
+      label: initial.label || '{% if strategy %}{{ strategy.label|escapejs }}{% endif %}',
+      slug: '{% if strategy %}{{ strategy.slug|escapejs }}{% elif form.slug.value %}{{ form.slug.value|escapejs }}{% endif %}',
+      status: '{% if strategy %}{{ strategy.status }}{% else %}draft{% endif %}',
+      description: '{% if strategy %}{{ strategy.description|escapejs }}{% endif %}',
+    },
+    init() {
+      this.defn = JSON.parse(JSON.stringify(initial));
+      this.defn.long = this.defn.long || {combine:'and', conditions:[]};
+      if (this.defn.allow_short && !this.defn.short) this.defn.short = {combine:'and', conditions:[]};
+      this.decorateConditions(this.defn.long.conditions);
+      if (this.defn.short) this.decorateConditions(this.defn.short.conditions);
+      this.meta.label = this.meta.label || this.defn.label || '';
+      this.logicSpec = this.logicSpec || '';
+      this.jsonText = JSON.stringify(this.defn, null, 2);
+    },
+    decorateConditions(list) {
+      (list || []).forEach(c => {
+        if (!c._ui) c._ui = this.detectUi(c);
+        this.hydrateUiFields(c);
+      });
+    },
+    detectUi(c) {
+      if (['volume_filter','squeeze','rising','falling','touch_in_last_n'].includes(c.op)) return c.op;
+      return 'compare';
+    },
+    hydrateUiFields(c) {
+      if (c._ui === 'compare') {
+        const L = this.operandKind(c.left);
+        const R = this.operandKind(c.right);
+        c._leftKind = L.kind; c._leftVal = L.val;
+        c._rightKind = R.kind; c._rightVal = R.val;
+      } else if (c._ui === 'rising' || c._ui === 'falling') {
+        c._refCol = (c.ref && c.ref.col) || 'adx_14';
+        c.bars = c.bars || 1;
+      } else if (c._ui === 'touch_in_last_n') {
+        c._refEma = (c.ref && c.ref.period) || '$ema_fast';
+      }
+    },
+    operandKind(node) {
+      if (typeof node === 'string' && node.startsWith('$')) return {kind:'param', val: node.slice(1)};
+      if (typeof node === 'number' || typeof node === 'boolean') return {kind:'literal', val: String(node)};
+      if (!node || typeof node !== 'object') return {kind:'col', val:'Close'};
+      if (node.fn === 'ema') return {kind:'ema', val: String(node.period)};
+      if (node.fn === 'rolling_max') return {kind:'rolling_max', val: `${node.col}|${node.period}|${node.shift||1}`};
+      if (node.fn === 'rolling_min') return {kind:'rolling_min', val: `${node.col}|${node.period}|${node.shift||1}`};
+      if (node.col) return {kind:'col', val: node.col};
+      if (node.fn === 'literal') return {kind:'literal', val: String(node.value)};
+      return {kind:'col', val:'Close'};
+    },
+    buildOperand(kind, val) {
+      val = (val || '').trim();
+      if (kind === 'col') return {col: val || 'Close'};
+      if (kind === 'ema') {
+        const p = val.startsWith('$') ? val : (isNaN(+val) ? val : +val);
+        return {fn:'ema', period: p};
+      }
+      if (kind === 'param') return '$' + val.replace(/^\$/, '');
+      if (kind === 'literal') {
+        const n = Number(val);
+        return {fn:'literal', value: isNaN(n) ? val : n};
+      }
+      if (kind === 'rolling_max' || kind === 'rolling_min') {
+        const parts = val.split('|');
+        const col = parts[0] || (kind==='rolling_max'?'High':'Low');
+        const period = parts[1] || '$lookback';
+        const shift = parseInt(parts[2] || '1', 10);
+        return {fn: kind, col, period: period.startsWith('$')||isNaN(+period)?period:+period, shift: Math.max(1, shift)};
+      }
+      return {col:'Close'};
+    },
+    rebuildCompare(c) {
+      c.left = this.buildOperand(c._leftKind, c._leftVal);
+      c.right = this.buildOperand(c._rightKind, c._rightVal);
+      c.op = c.op || 'gt';
+    },
+    applyUiType(c) {
+      if (c._ui === 'volume_filter') { Object.keys(c).forEach(k => { if (k!=='_ui') delete c[k]; }); c.op='volume_filter'; }
+      else if (c._ui === 'squeeze') { Object.keys(c).forEach(k => { if (k!=='_ui') delete c[k]; }); c.op='squeeze'; c.lookback='$lookback'; c.median_bars=100; }
+      else if (c._ui === 'rising' || c._ui === 'falling') { const ui=c._ui; Object.keys(c).forEach(k => { if (k!=='_ui') delete c[k]; }); c.op=ui; c.ref={col:'adx_14'}; c.bars=3; c._refCol='adx_14'; }
+      else if (c._ui === 'touch_in_last_n') { Object.keys(c).forEach(k => { if (k!=='_ui') delete c[k]; }); c.op='touch_in_last_n'; c.col='Low'; c.ref={fn:'ema',period:'$ema_fast'}; c.bars='$pull_bars'; c._refEma='$ema_fast'; }
+      else {
+        c.op='gt'; c._leftKind='col'; c._leftVal='Close'; c._rightKind='rolling_max'; c._rightVal='High|$lookback|1'; this.rebuildCompare(c);
+      }
+    },
+    addCondition(side) {
+      const c = {_ui:'compare', op:'gt', _leftKind:'col', _leftVal:'Close', _rightKind:'literal', _rightVal:'0'};
+      this.rebuildCompare(c);
+      if (side === 'long') this.defn.long.conditions.push(c);
+      else { if (!this.defn.short) this.defn.short={combine:'and',conditions:[]}; this.defn.short.conditions.push(c); }
+    },
+    toggleShort() {
+      if (this.defn.allow_short) {
+        if (!this.defn.short) this.defn.short = {combine:'and', conditions:[]};
+      } else {
+        this.defn.short = null;
+      }
+    },
+    addPreset(p) {
+      const cond = JSON.parse(JSON.stringify(p.condition));
+      cond._ui = this.detectUi(cond);
+      this.hydrateUiFields(cond);
+      this.defn.long.conditions.push(cond);
+      Object.entries(p.params || {}).forEach(([k, v]) => {
+        if (!this.defn.params) this.defn.params = {};
+        if (!this.defn.params[k]) this.defn.params[k] = JSON.parse(JSON.stringify(v));
+      });
+    },
+    addParam() {
+      if (!this.defn.params) this.defn.params = {};
+      let i = 1;
+      while (this.defn.params['param_'+i]) i++;
+      this.defn.params['param_'+i] = {type:'float', default:0, optimizable:false};
+    },
+    deleteParam(key) { delete this.defn.params[key]; },
+    renameParam(oldKey, newKey) {
+      newKey = (newKey||'').trim();
+      if (!newKey || newKey === oldKey || this.defn.params[newKey]) return;
+      this.defn.params[newKey] = this.defn.params[oldKey];
+      delete this.defn.params[oldKey];
+    },
+    cleanForSave() {
+      const strip = (list) => (list||[]).map(c => {
+        const out = {...c};
+        Object.keys(out).forEach(k => { if (k.startsWith('_')) delete out[k]; });
+        return out;
+      });
+      const d = JSON.parse(JSON.stringify(this.defn));
+      d.label = this.meta.label || d.label;
+      d.schema_version = 1;
+      d.long.conditions = strip(d.long.conditions);
+      if (d.short) d.short.conditions = strip(d.short.conditions);
+      else d.short = null;
+      return d;
+    },
+    syncJson() {
+      this.defn = this.cleanForSave();
+      this.defn.label = this.meta.label;
+      const text = JSON.stringify(this.defn, null, 2);
+      this.jsonText = text;
+      if (this.$refs.raw) this.$refs.raw.value = text;
+    },
+    loadFromJson() {
+      try {
+        this.defn = JSON.parse(this.jsonText);
+        this.decorateConditions(this.defn.long?.conditions);
+        if (this.defn.short) this.decorateConditions(this.defn.short.conditions);
+        this.meta.label = this.defn.label || this.meta.label;
+      } catch (e) {
+        this.validationOk = false;
+        this.validationMsg = 'JSON invalid: ' + e.message;
+      }
+    },
+    async validateNow() {
+      this.syncJson();
+      try {
+        const resp = await fetch(this.validateUrl, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+          body: JSON.stringify({definition: this.defn}),
+        });
+        const data = await resp.json();
+        this.validationOk = !!data.ok;
+        this.validationMsg = data.ok ? 'Schema OK' : (data.error || 'Invalid');
+        if (data.logic_spec) this.logicSpec = data.logic_spec;
+      } catch (e) {
+        this.validationOk = false;
+        this.validationMsg = String(e);
+      }
+    },
+  };
+}
 document.getElementById('quick-test-btn')?.addEventListener('click', async () => {
   const btn = document.getElementById('quick-test-btn');
   const out = document.getElementById('quick-test-out');
   out.textContent = 'Menghitung…';
-  const resp = await fetch(btn.dataset.url, {method:'POST', headers:{'X-CSRFToken': '{{ csrf_token }}'}});
-  const data = await resp.json();
-  out.textContent = JSON.stringify(data, null, 2);
+  const resp = await fetch(btn.dataset.url, {method:'POST', headers:{'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value}});
+  out.textContent = JSON.stringify(await resp.json(), null, 2);
 });
 </script>
-{% endif %}
 {% endblock %}

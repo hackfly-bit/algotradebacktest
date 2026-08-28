@@ -118,10 +118,11 @@ Klik nama strategi → parameter default + docstring (`logic_spec`).
 Buat strategi **tanpa coding Python**:
 
 1. **Builder** → pilih template (breakout, EMA/RSI, gemini, claude, kimi)
-2. Edit definisi JSON v1 (rules, params, exit SL/TP)
-3. Set status **active** → muncul di form Run baru dan screening `*`
-4. **Preview** sinyal + **Quick test** mini backtest
-5. **Export/Import JSON** untuk share antar install
+2. Edit lewat **Visual rule editor** (tambah kondisi, preset blocks, panel parameter) — tab JSON opsional
+3. **Cek schema** live + preview logic_spec
+4. Set status **active** → muncul di form Run baru dan screening `*`
+5. **Preview OHLC** + marker long/short + **Quick test** mini backtest
+6. **Export/Import JSON**, duplikat, **versi baru** (fork), filter milik saya/semua
 
 Custom slug: `custom_<nama>` (contoh `custom_my_breakout`).
 
