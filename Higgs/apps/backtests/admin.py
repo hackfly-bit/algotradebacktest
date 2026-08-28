@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.backtests.models import BacktestRun, MetricSet, Trade
+from apps.backtests.models import BacktestRun, MetricSet, Trade, WalkForwardFold
 
 
 @admin.register(BacktestRun)
@@ -20,3 +20,9 @@ class TradeAdmin(admin.ModelAdmin):
 class MetricSetAdmin(admin.ModelAdmin):
     list_display = ("id", "run", "split", "label", "final_equity", "sharpe", "trades")
     list_filter = ("split",)
+
+
+@admin.register(WalkForwardFold)
+class WalkForwardFoldAdmin(admin.ModelAdmin):
+    list_display = ("id", "run", "dev_start", "val_start", "best_ema_fast", "val_sharpe", "positive_sharpe")
+    list_filter = ("positive_sharpe",)

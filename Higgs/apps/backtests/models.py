@@ -100,3 +100,22 @@ class MetricSet(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=["run", "split"])]
+
+
+class WalkForwardFold(models.Model):
+    run = models.ForeignKey(BacktestRun, on_delete=models.CASCADE, related_name="wf_folds")
+    dev_start = models.DateField()
+    dev_end = models.DateField()
+    val_start = models.DateField()
+    val_end = models.DateField()
+    best_ema_fast = models.IntegerField(null=True, blank=True)
+    dev_sharpe = models.FloatField(null=True, blank=True)
+    val_sharpe = models.FloatField(null=True, blank=True)
+    val_return = models.FloatField(null=True, blank=True)
+    val_max_dd = models.FloatField(null=True, blank=True)
+    val_trades = models.IntegerField(null=True, blank=True)
+    positive_sharpe = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["dev_start"]
+        indexes = [models.Index(fields=["run"])]

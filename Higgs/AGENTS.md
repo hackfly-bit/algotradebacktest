@@ -27,6 +27,6 @@ Taste-Skill + `docs/DESIGN.md`. Density 8–9. Ponytail: jangan over-build; jang
 
 ## Fase
 
-Fase 7 (UI screening IS/OOS) selesai. Berikutnya Fase 8: walk-forward tab + `WalkForwardFold`.
+Fase 8 (walk-forward tab + WalkForwardFold) selesai. Berikutnya Fase 9: robustness + cost stress.
 
 Paritas: `prepare_dataset.bat` → ingest → screening `*` → `/compare/`.

@@ -11,11 +11,12 @@ from django.tasks import task
 from django.utils import timezone as dj_tz
 
 import engine.strategies  # noqa: F401
-from apps.backtests.models import BacktestRun, MetricSet, Trade
+from apps.backtests.models import BacktestRun, MetricSet, Trade, WalkForwardFold
 from engine.backtester import apply_strategy, run_backtest
 from engine.data import slice_df
 from engine.indicators import add_indicators
 from engine.registry import resolve_strategy_queue
+from engine.walk_forward import run_walk_forward
 
 METRIC_FIELDS = {
     "final_equity",
@@ -108,6 +109,42 @@ def _persist_result(
     MetricSet.objects.create(run=run, split=split, label=label, extras=extras, **payload)
 
 
+def _persist_walk_forward(run: BacktestRun, folds, wf_pass: bool, summary: dict) -> None:
+    WalkForwardFold.objects.filter(run=run).delete()
+    if folds:
+        WalkForwardFold.objects.bulk_create(
+            [
+                WalkForwardFold(
+                    run=run,
+                    dev_start=fold.dev_start,
+                    dev_end=fold.dev_end,
+                    val_start=fold.val_start,
+                    val_end=fold.val_end,
+                    best_ema_fast=fold.chosen_ema_fast,
+                    dev_sharpe=fold.dev_sharpe,
+                    val_sharpe=fold.val_sharpe,
+                    val_return=fold.val_return,
+                    val_max_dd=fold.val_max_dd,
+                    val_trades=fold.val_trades,
+                    positive_sharpe=fold.positive_sharpe,
+                )
+                for fold in folds
+            ],
+            batch_size=200,
+        )
+    MetricSet.objects.filter(run=run, split="wf", label="summary").delete()
+    MetricSet.objects.create(
+        run=run,
+        split="wf",
+        label="summary",
+        extras={**summary, "wf_pass": wf_pass},
+    )
+    params = dict(run.params or {})
+    params["WF_PASS"] = wf_pass
+    run.params = params
+    run.save(update_fields=["params"])
+
+
 def _run_backtest_on_df(
     df_ind: pd.DataFrame,
     strategy_name: str,
@@ -165,6 +202,20 @@ def execute_run(run_id: int) -> None:
             _persist_result(run, full, split="full", store_trades=True, store_equity=True)
             _persist_result(run, is_result, split="is")
             _persist_result(run, oos_result, split="oos")
+            if run.multi_deep:
+                folds, wf_pass, summary = run_walk_forward(
+                    df,
+                    strategy_name,
+                    params,
+                    initial_equity=run.initial_equity,
+                    fee=run.fee,
+                    slippage=run.slippage,
+                    commission_per_lot=run.commission_per_lot,
+                    spread=run.spread,
+                    risk_pct=run.risk_pct,
+                    contract_size=run.contract_size,
+                )
+                _persist_walk_forward(run, folds, wf_pass, summary)
             run.status = BacktestRun.Status.DONE
             run.finished_at = dj_tz.now()
             run.save(update_fields=["status", "finished_at"])

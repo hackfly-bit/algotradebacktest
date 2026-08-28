@@ -57,7 +57,7 @@ class BacktestRunForm(forms.Form):
         widget=forms.DateInput(attrs={"class": "field-input", "type": "date"}),
     )
     multi_deep = forms.BooleanField(
-        label="MULTI_DEEP (WF/robustness/MC — fase berikutnya)",
+        label="MULTI_DEEP (walk-forward, robustness, MC)",
         required=False,
         initial=False,
         widget=forms.CheckboxInput(attrs={"class": "rounded border-black/20"}),

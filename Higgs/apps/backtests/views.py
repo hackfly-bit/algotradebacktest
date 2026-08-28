@@ -7,20 +7,34 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.backtests.forms import BacktestRunForm
-from apps.backtests.models import BacktestRun, MetricSet, Trade
+from apps.backtests.models import BacktestRun, MetricSet, Trade, WalkForwardFold
 from apps.backtests.tasks import create_screening_runs, enqueue_run
 from apps.marketdata.models import Dataset
 
-VALID_TABS = {"overview", "equity", "trades", "splits"}
+VALID_TABS = {"overview", "equity", "trades", "splits", "walkforward"}
 
 
 def _metric_map(run: BacktestRun) -> dict[str, MetricSet | None]:
     rows = {m.split: m for m in run.metrics.all()}
+    wf_summary = MetricSet.objects.filter(run=run, split="wf", label="summary").first()
     return {
         "full": rows.get("full"),
         "is": rows.get("is"),
         "oos": rows.get("oos"),
+        "wf": wf_summary,
     }
+
+
+def _run_tabs(run: BacktestRun) -> list[tuple[str, str]]:
+    tabs = [
+        ("overview", "Overview"),
+        ("equity", "Equity"),
+        ("trades", "Trades"),
+        ("splits", "IS/OOS"),
+    ]
+    if run.multi_deep:
+        tabs.append(("walkforward", "Walk-forward"))
+    return tabs
 
 
 def _enqueue(run_id: int) -> None:
@@ -152,6 +166,8 @@ def run_detail(request, pk):
     tab = request.GET.get("tab", "overview")
     if tab not in VALID_TABS:
         tab = "overview"
+    if tab == "walkforward" and not run.multi_deep:
+        tab = "overview"
     metrics = _metric_map(run)
     equity_json = "[]"
     if metrics["full"] and metrics["full"].extras.get("equity_curve"):
@@ -169,12 +185,9 @@ def run_detail(request, pk):
         ("is", metrics["is"]),
         ("oos", metrics["oos"]),
     ]
-    tabs = [
-        ("overview", "Overview"),
-        ("equity", "Equity"),
-        ("trades", "Trades"),
-        ("splits", "IS/OOS"),
-    ]
+    tabs = _run_tabs(run)
+    wf_folds = list(run.wf_folds.all()) if run.multi_deep else []
+    wf_summary = metrics.get("wf")
     return render(
         request,
         "backtests/run_detail.html",
@@ -187,6 +200,8 @@ def run_detail(request, pk):
             "page_obj": page_obj,
             "split_rows": split_rows,
             "tabs": tabs,
+            "wf_folds": wf_folds,
+            "wf_summary": wf_summary,
         },
     )
 
@@ -197,6 +212,8 @@ def run_partial(request, pk, tab):
         raise Http404
     run = get_object_or_404(BacktestRun.objects.select_related("dataset"), pk=pk)
     if run.strategy_name in {"*", "all"}:
+        raise Http404
+    if tab == "walkforward" and not run.multi_deep:
         raise Http404
     metrics = _metric_map(run)
     ctx = {
@@ -214,6 +231,9 @@ def run_partial(request, pk, tab):
         if metrics["full"] and metrics["full"].extras.get("equity_curve"):
             curve = metrics["full"].extras["equity_curve"]
         ctx["equity_json"] = json.dumps(curve)
+    if tab == "walkforward":
+        ctx["wf_folds"] = list(run.wf_folds.all())
+        ctx["wf_summary"] = metrics.get("wf")
     return render(request, f"backtests/partials/tab_{tab}.html", ctx)
 
 
