@@ -1,0 +1,59 @@
+{% load backtest_extras %}
+<section class="flex flex-col gap-3">
+  <div class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Parameter grid (in-sample)</h2>
+      <p class="panel-subtitle">EMA fast {10, 15, 20, 25, 30} · PARAM_STABLE = ≥4 Sharpe positif</p>
+    </div>
+    <div class="panel-body">
+      {% if rob_summary %}
+      <span class="badge {% if rob_summary.extras.param_stable %}badge-profit{% else %}badge-loss{% endif %}">
+        PARAM_STABLE={{ rob_summary.extras.param_stable|yesno:"True,False" }}
+      </span>
+      {% endif %}
+    </div>
+    <div class="panel-body-flush overflow-x-auto">
+      <table class="data-table data-table-compact">
+        <thead><tr><th>Label</th><th class="text-right">Sharpe</th><th class="text-right">Return</th><th class="text-right">Trades</th></tr></thead>
+        <tbody>
+          {% for row in param_rows %}
+          <tr>
+            <td class="font-mono text-[11px]">{{ row.label }}</td>
+            <td class="text-right font-mono text-[12px] {% if row.oos_sharpe > 0 %}metric-positive{% else %}metric-negative{% endif %}">{{ row.oos_sharpe|floatformat:3 }}</td>
+            <td class="text-right font-mono text-[12px]">{{ row.oos_return|pct }}</td>
+            <td class="text-right font-mono text-[12px]">{{ row.trades }}</td>
+          </tr>
+          {% empty %}<tr><td colspan="4" class="text-[12px] text-ink/55">—</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">EMA perturbation (OOS)</h2>
+      <p class="panel-subtitle">Pairs 18/48 … 22/52 · PERTURB_STABLE = semua return OOS &gt; 0</p>
+    </div>
+    <div class="panel-body">
+      {% if rob_summary %}
+      <span class="badge {% if rob_summary.extras.perturb_stable %}badge-profit{% else %}badge-loss{% endif %}">
+        PERTURB_STABLE={{ rob_summary.extras.perturb_stable|yesno:"True,False" }}
+      </span>
+      {% endif %}
+    </div>
+    <div class="panel-body-flush overflow-x-auto">
+      <table class="data-table data-table-compact">
+        <thead><tr><th>EMA</th><th class="text-right">Return</th><th class="text-right">Sharpe</th><th class="text-right">DD</th></tr></thead>
+        <tbody>
+          {% for row in perturb_rows %}
+          <tr>
+            <td class="font-mono text-[11px]">{{ row.label }}</td>
+            <td class="text-right font-mono text-[12px] {% if row.oos_return > 0 %}metric-positive{% else %}metric-negative{% endif %}">{{ row.oos_return|pct }}</td>
+            <td class="text-right font-mono text-[12px]">{{ row.oos_sharpe|floatformat:3 }}</td>
+            <td class="text-right font-mono text-[12px] metric-negative">{{ row.oos_dd|pct }}</td>
+          </tr>
+          {% empty %}<tr><td colspan="4" class="text-[12px] text-ink/55">—</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

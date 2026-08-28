@@ -12,6 +12,8 @@
   --color-canvas-dark: #121410;
   --color-surface: #fffcf7;
   --color-surface-dark: #1c1e1a;
+  --color-surface-elevated: #ffffff;
+  --color-surface-elevated-dark: #242820;
   --color-ink: #1a1c18;
   --color-ink-dark: #e8e6dc;
   --color-accent: #0f7a6c;
@@ -37,24 +39,146 @@
 }
 
 @layer components {
+  .dashboard-canvas {
+    @apply bg-canvas dark:bg-canvas-dark;
+    background-image:
+      linear-gradient(to right, rgb(0 0 0 / 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(0 0 0 / 0.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .dark .dashboard-canvas {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.04) 1px, transparent 1px);
+  }
+
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-[6px] bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent-dark dark:text-canvas-dark;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-[6px] bg-accent px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-accent/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent-dark dark:text-canvas-dark;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-[6px] border border-black/10 bg-transparent px-3 py-1.5 text-sm text-ink hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:border-white/10 dark:text-ink-dark dark:hover:bg-white/5;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-black/10 bg-surface/80 px-3 py-1.5 text-sm text-ink backdrop-blur-sm hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:border-white/10 dark:bg-surface-dark/80 dark:text-ink-dark dark:hover:bg-white/5;
+  }
+
+  .btn-ghost-sm {
+    @apply inline-flex items-center justify-center rounded-[6px] border border-black/10 bg-transparent px-2 py-1 text-[11px] text-ink/80 hover:bg-black/5 dark:border-white/10 dark:text-ink-dark/80 dark:hover:bg-white/5;
   }
 
   .field-input {
     @apply mt-1 w-full rounded-[6px] border border-black/15 bg-surface px-2.5 py-1.5 text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent dark:border-white/15 dark:bg-surface-dark dark:text-ink-dark;
   }
 
+  .sidebar-brand {
+    @apply flex h-14 items-center gap-2.5 border-b border-black/10 px-3 dark:border-white/10;
+  }
+
+  .sidebar-brand-mark {
+    @apply flex h-8 w-8 items-center justify-center rounded-[6px] bg-accent/15 font-mono text-[11px] font-semibold text-accent dark:bg-accent-dark/20 dark:text-accent-dark;
+  }
+
+  .nav-section-label {
+    @apply px-2 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-ink/45 dark:text-ink-dark/45;
+  }
+
   .nav-link {
-    @apply flex items-center rounded-[6px] px-2 py-1.5 text-sm text-ink/80 hover:bg-black/5 hover:text-ink dark:text-ink-dark/80 dark:hover:bg-white/5 dark:hover:text-ink-dark;
+    @apply flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-[13px] text-ink/75 transition-colors hover:bg-black/5 hover:text-ink dark:text-ink-dark/75 dark:hover:bg-white/5 dark:hover:text-ink-dark;
   }
 
   .nav-link-active {
-    @apply bg-accent/10 font-medium text-accent dark:bg-accent-dark/15 dark:text-accent-dark;
+    @apply bg-accent/12 font-medium text-accent shadow-[inset_2px_0_0_0] shadow-accent dark:bg-accent-dark/15 dark:text-accent-dark dark:shadow-accent-dark;
+  }
+
+  .nav-icon {
+    @apply h-4 w-4 shrink-0 opacity-70;
+  }
+
+  .nav-link-active .nav-icon {
+    @apply opacity-100;
+  }
+
+  .market-strip {
+    @apply flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-black/10 bg-surface/90 px-3 py-1.5 font-mono text-[11px] backdrop-blur-sm dark:border-white/10 dark:bg-surface-dark/90;
+  }
+
+  .market-pill {
+    @apply inline-flex items-center gap-1.5 rounded-[6px] border border-black/10 bg-canvas/80 px-2 py-0.5 dark:border-white/10 dark:bg-canvas-dark/80;
+  }
+
+  .market-dot {
+    @apply h-1.5 w-1.5 rounded-full bg-profit;
+  }
+
+  .topbar {
+    @apply flex h-11 shrink-0 items-center gap-3 border-b border-black/10 bg-surface/95 px-3 backdrop-blur-md dark:border-white/10 dark:bg-surface-dark/95;
+  }
+
+  .panel {
+    @apply overflow-hidden rounded-[6px] border border-black/10 bg-surface shadow-sm dark:border-white/10 dark:bg-surface-dark;
+  }
+
+  .panel-header {
+    @apply flex items-center justify-between gap-2 border-b border-black/10 px-3 py-2 dark:border-white/10;
+  }
+
+  .panel-title {
+    @apply text-[12px] font-semibold tracking-tight text-ink dark:text-ink-dark;
+  }
+
+  .panel-subtitle {
+    @apply text-[11px] text-ink/55 dark:text-ink-dark/50;
+  }
+
+  .panel-body {
+    @apply p-3;
+  }
+
+  .panel-body-flush {
+    @apply p-0;
+  }
+
+  .kpi-grid {
+    @apply grid grid-cols-2 gap-2 lg:grid-cols-4 xl:grid-cols-6;
+  }
+
+  .kpi-tile {
+    @apply rounded-[6px] border border-black/10 bg-surface px-3 py-2.5 shadow-sm dark:border-white/10 dark:bg-surface-dark;
+  }
+
+  .kpi-label {
+    @apply text-[10px] font-medium uppercase tracking-wide text-ink/50 dark:text-ink-dark/50;
+  }
+
+  .kpi-value {
+    @apply mt-0.5 font-mono text-lg font-medium leading-none tabular-nums text-ink dark:text-ink-dark;
+  }
+
+  .kpi-meta {
+    @apply mt-1 text-[11px] text-ink/55 dark:text-ink-dark/50;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-[4px] px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide;
+  }
+
+  .badge-neutral {
+    @apply bg-black/5 text-ink/70 dark:bg-white/10 dark:text-ink-dark/70;
+  }
+
+  .badge-profit {
+    @apply bg-profit/12 text-profit dark:bg-profit/20;
+  }
+
+  .badge-loss {
+    @apply bg-loss/12 text-loss dark:bg-loss/20;
+  }
+
+  .badge-warn {
+    @apply bg-warn/12 text-warn dark:bg-warn/20;
+  }
+
+  .badge-accent {
+    @apply bg-accent/12 text-accent dark:bg-accent-dark/15 dark:text-accent-dark;
   }
 
   .data-table {
@@ -62,14 +186,63 @@
   }
 
   .data-table th {
-    @apply sticky top-0 bg-surface px-2 py-1 text-left text-[11px] font-medium text-ink/60 dark:bg-surface-dark dark:text-ink-dark/55;
+    @apply sticky top-0 z-[1] bg-surface-elevated px-2.5 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-ink/55 dark:bg-surface-elevated-dark dark:text-ink-dark/55;
+  }
+
+  .dark .data-table th {
+    @apply bg-surface-elevated-dark;
   }
 
   .data-table td {
-    @apply border-t border-black/10 px-2 py-1 dark:border-white/10;
+    @apply border-t border-black/8 px-2.5 py-1.5 align-middle dark:border-white/8;
   }
 
   .data-table tbody tr:hover {
-    @apply bg-black/[0.03] dark:bg-white/[0.04];
+    @apply bg-black/[0.025] dark:bg-white/[0.03];
+  }
+
+  .data-table-compact td,
+  .data-table-compact th {
+    @apply py-1;
+  }
+
+  .empty-state {
+    @apply flex flex-col items-start gap-2 rounded-[6px] border border-dashed border-black/15 bg-canvas/50 px-4 py-6 dark:border-white/15 dark:bg-canvas-dark/40;
+  }
+
+  .breadcrumb {
+    @apply flex flex-wrap items-center gap-1.5 text-[11px] text-ink/55 dark:text-ink-dark/50;
+  }
+
+  .breadcrumb a {
+    @apply text-accent hover:underline dark:text-accent-dark;
+  }
+
+  .strategy-card {
+    @apply flex flex-col rounded-[6px] border border-black/10 bg-surface p-3 shadow-sm transition-shadow hover:shadow-md dark:border-white/10 dark:bg-surface-dark;
+  }
+
+  .metric-positive {
+    @apply font-mono text-profit;
+  }
+
+  .metric-negative {
+    @apply font-mono text-loss;
+  }
+
+  .login-shell {
+    @apply relative flex min-h-full items-center justify-center overflow-hidden p-4;
+  }
+
+  .login-grid {
+    @apply pointer-events-none absolute inset-0 opacity-40;
+    background-image:
+      linear-gradient(to right, rgb(15 122 108 / 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(15 122 108 / 0.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .login-card {
+    @apply relative w-full max-w-md rounded-[6px] border border-black/10 bg-surface/95 p-6 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-surface-dark/95;
   }
 }

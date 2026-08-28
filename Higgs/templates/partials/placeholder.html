@@ -1,7 +1,21 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="rounded-[6px] border border-black/10 bg-surface p-3 dark:border-white/10 dark:bg-surface-dark">
-  <p class="text-sm text-ink/80 dark:text-ink-dark/80">{{ placeholder_note }}</p>
-</section>
+<div class="mx-auto max-w-[720px]">
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">{{ page_title|default:"Segera hadir" }}</h2>
+        <p class="panel-subtitle">Fase implementasi berikutnya</p>
+      </div>
+      <span class="badge badge-warn">placeholder</span>
+    </div>
+    <div class="panel-body">
+      <div class="empty-state border-none bg-transparent p-0">
+        <p class="text-sm text-ink/80 dark:text-ink-dark/80">{{ placeholder_note }}</p>
+        <a href="{% url 'core:overview' %}" class="btn-ghost mt-3">Kembali ke ringkasan</a>
+      </div>
+    </div>
+  </section>
+</div>
 {% endblock %}

@@ -51,6 +51,25 @@ def run_backtest(
 
     x = signal_df.sort_values("Datetime").reset_index(drop=True)
     n = len(x)
+    if n == 0:
+        empty_eq = pd.Series(dtype=float, name="equity")
+        empty_trades = pd.DataFrame()
+        metrics = calculate_metrics(empty_eq, empty_trades, initial_equity)
+        metrics["fee"] = fee
+        metrics["slippage"] = slippage
+        metrics["commission_per_lot"] = commission_per_lot
+        metrics["spread"] = spread
+        return BacktestResult(
+            name=name,
+            equity=empty_eq,
+            trades=empty_trades,
+            metrics=metrics,
+            params=params or {},
+            fee=fee,
+            slippage=slippage,
+            commission_per_lot=commission_per_lot,
+            spread=spread,
+        )
     opens = x["Open"].to_numpy(float)
     highs = x["High"].to_numpy(float)
     lows = x["Low"].to_numpy(float)

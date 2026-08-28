@@ -47,6 +47,16 @@ def validate_ohlcv(df: pd.DataFrame, name: str, freq: str | None = None) -> dict
     return report
 
 
+def slice_df(df: pd.DataFrame, start: str | None = None, end: str | None = None) -> pd.DataFrame:
+    ts = pd.to_datetime(df["Datetime"])
+    mask = pd.Series(True, index=df.index)
+    if start:
+        mask &= ts >= pd.Timestamp(start)
+    if end:
+        mask &= ts <= pd.Timestamp(end)
+    return df.loc[mask].copy()
+
+
 def resample_h1(df: pd.DataFrame) -> pd.DataFrame:
     x = df.set_index("Datetime")
     h1 = x.resample("1h").agg(

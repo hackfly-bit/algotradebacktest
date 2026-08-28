@@ -1,0 +1,23 @@
+<section class="flex flex-col gap-3">
+  <div class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Export MQL5</h2>
+      <p class="panel-subtitle">Spec 12 bagian · prefix REJECTED_ jika bukan ACCEPTABLE/ROBUST</p>
+    </div>
+    <div class="panel-body flex flex-wrap gap-2">
+      {% for file in exports %}
+      <a href="{% url 'reports:export_download' file.pk %}" class="btn-secondary text-[12px]">{{ file.filename }}</a>
+      {% empty %}
+      <p class="text-sm text-ink/60">Belum ada file export untuk run ini.</p>
+      {% endfor %}
+    </div>
+  </div>
+  {% if export_preview %}
+  <div class="panel">
+    <div class="panel-header"><h2 class="panel-title">Preview (.md)</h2></div>
+    <div class="panel-body">
+      <pre class="max-h-[480px] overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-ink/85">{{ export_preview }}</pre>
+    </div>
+  </div>
+  {% endif %}
+</section>

@@ -1,0 +1,30 @@
+{% load backtest_extras %}
+<section class="panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Cost stress (OOS)</h2>
+    <p class="panel-subtitle">Fee/slippage/spread/komisi ×1, ×2, ×3 · COST_PASS = 2× masih profit</p>
+  </div>
+  <div class="panel-body">
+    {% if rob_summary %}
+    <span class="badge {% if rob_summary.extras.cost_pass %}badge-profit{% else %}badge-loss{% endif %}">
+      COST_PASS={{ rob_summary.extras.cost_pass|yesno:"True,False" }}
+    </span>
+    {% endif %}
+  </div>
+  <div class="panel-body-flush overflow-x-auto">
+    <table class="data-table data-table-compact">
+      <thead><tr><th>Multiplier</th><th class="text-right">Return</th><th class="text-right">Sharpe</th><th class="text-right">DD</th><th class="text-right">Trades</th></tr></thead>
+      <tbody>
+        {% for row in cost_rows %}
+        <tr>
+          <td class="font-mono text-[11px]">{{ row.label }}</td>
+          <td class="text-right font-mono text-[12px] {% if row.oos_return > 0 %}metric-positive{% else %}metric-negative{% endif %}">{{ row.oos_return|pct }}</td>
+          <td class="text-right font-mono text-[12px]">{{ row.oos_sharpe|floatformat:3 }}</td>
+          <td class="text-right font-mono text-[12px] metric-negative">{{ row.oos_dd|pct }}</td>
+          <td class="text-right font-mono text-[12px]">{{ row.trades }}</td>
+        </tr>
+        {% empty %}<tr><td colspan="5" class="text-[12px] text-ink/55">—</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>

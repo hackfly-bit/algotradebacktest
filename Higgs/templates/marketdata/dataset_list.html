@@ -1,94 +1,120 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="flex flex-col gap-4">
-  <section>
-    {% if datasets %}
-    <div class="overflow-x-auto">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Nama</th>
-            <th>Simbol</th>
-            <th>TF</th>
-            <th>Rentang</th>
-            <th class="text-right">rows_h1</th>
-            <th>volume_usable</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for ds in datasets %}
-          <tr>
-            <td>
-              <a class="text-accent hover:underline dark:text-accent-dark" href="{% url 'marketdata:dataset_detail' ds.pk %}">{{ ds.source_name }}</a>
-            </td>
-            <td>{{ ds.symbol }}</td>
-            <td>{{ ds.timeframe }}</td>
-            <td class="font-mono text-[12px] whitespace-nowrap">
-              {% if ds.start_ts %}{{ ds.start_ts|date:"Y-m-d H:i" }}{% else %}?{% endif %}
-              -
-              {% if ds.end_ts %}{{ ds.end_ts|date:"Y-m-d H:i" }}{% else %}?{% endif %}
-            </td>
-            <td class="font-mono text-right">{{ ds.rows_h1 }}</td>
-            <td>{% if ds.volume_usable %}ya{% else %}tidak{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<div class="mx-auto flex max-w-[1400px] flex-col gap-3">
+  <div class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <p class="breadcrumb"><a href="{% url 'core:overview' %}">Ringkasan</a> / Dataset</p>
+      <p class="mt-1 text-[12px] text-ink/60 dark:text-ink-dark/55">OHLCV M1 → cache H1 · metadata SQLite</p>
     </div>
-    {% else %}
-    <p class="text-sm text-ink/75 dark:text-ink-dark/75">Belum ada dataset.</p>
-    {% endif %}
+  </div>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Dataset terdaftar</h2>
+        <p class="panel-subtitle">{{ datasets|length }} file · validasi notebook</p>
+      </div>
+    </div>
+    <div class="panel-body-flush">
+      {% if datasets %}
+      <div class="overflow-x-auto">
+        <table class="data-table data-table-compact">
+          <thead>
+            <tr>
+              <th>Nama</th>
+              <th>Simbol</th>
+              <th>TF</th>
+              <th>Rentang</th>
+              <th class="text-right">H1 bars</th>
+              <th>Volume</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ds in datasets %}
+            <tr>
+              <td>
+                <a class="font-medium text-accent hover:underline dark:text-accent-dark" href="{% url 'marketdata:dataset_detail' ds.pk %}">{{ ds.source_name }}</a>
+              </td>
+              <td><span class="badge badge-neutral">{{ ds.symbol }}</span></td>
+              <td class="font-mono text-[12px]">{{ ds.timeframe }}</td>
+              <td class="font-mono text-[11px] whitespace-nowrap text-ink/70 dark:text-ink-dark/65">
+                {% if ds.start_ts %}{{ ds.start_ts|date:"Y-m-d" }}{% else %}?{% endif %}
+                → {% if ds.end_ts %}{{ ds.end_ts|date:"Y-m-d" }}{% else %}?{% endif %}
+              </td>
+              <td class="text-right font-mono text-[12px]">{{ ds.rows_h1 }}</td>
+              <td>{% if ds.volume_usable %}<span class="badge badge-profit">usable</span>{% else %}<span class="badge badge-neutral">dead</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="panel-body">
+        <div class="empty-state">
+          <p class="text-sm font-medium">Belum ada dataset</p>
+          <p class="text-[12px] text-ink/65 dark:text-ink-dark/60">Ingest CSV M1 atau jalankan prepare_dataset.bat di root repo.</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
   </section>
 
-  <section class="border-t border-black/10 pt-3 dark:border-white/10">
-    <h2 class="text-sm font-medium">Daftar CSV</h2>
-    <p class="mt-1 max-w-prose text-[12px] text-ink/60 dark:text-ink-dark/55">
-      Ingest CSV M1 penuh bisa 1-2 menit dan menahan request ini. File ratusan MB lebih aman lewat perintah:
-      <span class="font-mono">py manage.py ingest_dataset e:\Project\AlgoTradeBacktest\XAUUSD_2009_2026_M1.csv</span>
-    </p>
-    <form
-      method="post"
-      enctype="multipart/form-data"
-      class="mt-3 max-w-xl"
-      x-data="{ ingesting: false }"
-      @submit="ingesting = true"
-    >
-      {% csrf_token %}
-      {% if form.non_field_errors %}
-      <p class="mb-2 text-sm text-loss">{{ form.non_field_errors.0 }}</p>
-      {% endif %}
-      <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <label class="block text-[12px] font-medium" for="{{ form.source_name.id_for_label }}">
-          {{ form.source_name.label }}
-          {{ form.source_name }}
-          {% if form.source_name.errors %}<span class="font-normal text-loss">{{ form.source_name.errors.0 }}</span>{% endif %}
-        </label>
-        <label class="block text-[12px] font-medium" for="{{ form.symbol.id_for_label }}">
-          {{ form.symbol.label }}
-          {{ form.symbol }}
-          {% if form.symbol.errors %}<span class="font-normal text-loss">{{ form.symbol.errors.0 }}</span>{% endif %}
-        </label>
-        <label class="block text-[12px] font-medium" for="{{ form.timeframe.id_for_label }}">
-          {{ form.timeframe.label }}
-          {{ form.timeframe }}
-          {% if form.timeframe.errors %}<span class="font-normal text-loss">{{ form.timeframe.errors.0 }}</span>{% endif %}
-        </label>
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Ingest CSV</h2>
+        <p class="panel-subtitle">Upload kecil atau path lokal (Windows)</p>
       </div>
-      <label class="mt-3 block text-[12px] font-medium" for="{{ form.csv_file.id_for_label }}">
-        {{ form.csv_file.label }}
-        {{ form.csv_file }}
-        {% if form.csv_file.errors %}<span class="font-normal text-loss">{{ form.csv_file.errors.0 }}</span>{% endif %}
-      </label>
-      <label class="mt-3 block text-[12px] font-medium" for="{{ form.local_path.id_for_label }}">
-        {{ form.local_path.label }}
-        {{ form.local_path }}
-        <span class="mt-1 block font-normal text-[11px] text-ink/55 dark:text-ink-dark/50">{{ form.local_path.help_text }}</span>
-        {% if form.local_path.errors %}<span class="font-normal text-loss">{{ form.local_path.errors.0 }}</span>{% endif %}
-      </label>
-      <p x-show="ingesting" x-cloak class="mt-2 text-[12px] text-warn">Sedang ingest. Jangan tutup halaman.</p>
-      <button type="submit" class="btn-primary mt-3" :disabled="ingesting">Ingest</button>
-    </form>
+    </div>
+    <div class="panel-body">
+      <p class="mb-3 max-w-prose text-[12px] text-ink/60 dark:text-ink-dark/55">
+        File ratusan MB lebih aman lewat perintah:
+        <code class="rounded bg-canvas px-1 py-0.5 font-mono text-[11px] dark:bg-canvas-dark">py manage.py ingest_dataset ..\XAUUSD_2009_2026_M1.csv</code>
+      </p>
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        class="max-w-2xl"
+        x-data="{ ingesting: false }"
+        @submit="ingesting = true"
+      >
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <p class="mb-2 text-sm text-loss">{{ form.non_field_errors.0 }}</p>
+        {% endif %}
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <label class="block text-[12px] font-medium" for="{{ form.source_name.id_for_label }}">
+            {{ form.source_name.label }}
+            {{ form.source_name }}
+            {% if form.source_name.errors %}<span class="font-normal text-loss">{{ form.source_name.errors.0 }}</span>{% endif %}
+          </label>
+          <label class="block text-[12px] font-medium" for="{{ form.symbol.id_for_label }}">
+            {{ form.symbol.label }}
+            {{ form.symbol }}
+            {% if form.symbol.errors %}<span class="font-normal text-loss">{{ form.symbol.errors.0 }}</span>{% endif %}
+          </label>
+          <label class="block text-[12px] font-medium" for="{{ form.timeframe.id_for_label }}">
+            {{ form.timeframe.label }}
+            {{ form.timeframe }}
+            {% if form.timeframe.errors %}<span class="font-normal text-loss">{{ form.timeframe.errors.0 }}</span>{% endif %}
+          </label>
+        </div>
+        <label class="mt-3 block text-[12px] font-medium" for="{{ form.csv_file.id_for_label }}">
+          {{ form.csv_file.label }}
+          {{ form.csv_file }}
+          {% if form.csv_file.errors %}<span class="font-normal text-loss">{{ form.csv_file.errors.0 }}</span>{% endif %}
+        </label>
+        <label class="mt-3 block text-[12px] font-medium" for="{{ form.local_path.id_for_label }}">
+          {{ form.local_path.label }}
+          {{ form.local_path }}
+          <span class="mt-1 block font-normal text-[11px] text-ink/55 dark:text-ink-dark/50">{{ form.local_path.help_text }}</span>
+          {% if form.local_path.errors %}<span class="font-normal text-loss">{{ form.local_path.errors.0 }}</span>{% endif %}
+        </label>
+        <p x-show="ingesting" x-cloak class="mt-2 text-[12px] text-warn">Sedang ingest. Jangan tutup halaman.</p>
+        <button type="submit" class="btn-primary mt-4" :disabled="ingesting">Ingest dataset</button>
+      </form>
+    </div>
   </section>
 </div>
 {% endblock %}

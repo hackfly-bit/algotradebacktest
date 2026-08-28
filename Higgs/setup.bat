@@ -19,9 +19,8 @@ if exist package.json (
 )
 
 echo.
-echo Higgs Fase 1. Berikutnya di cmd.exe:
+echo Higgs siap. Berikutnya di cmd.exe:
 echo   python manage.py migrate
 echo   python manage.py createsuperuser
 echo   python manage.py runserver
-echo Terminal lain untuk CSS:
-echo   npx @tailwindcss/cli -i static\src\input.css -o static\dist\app.css --watch
+echo Lihat README.md untuk ingest dataset dan panduan penggunaan.

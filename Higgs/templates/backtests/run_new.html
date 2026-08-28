@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mx-auto max-w-[720px]">
+  <p class="breadcrumb"><a href="{% url 'backtests:run_list' %}">Run</a> / Baru</p>
+
+  {% if no_dataset %}
+  <section class="panel mt-3">
+    <div class="panel-body">
+      <div class="empty-state">
+        <p class="text-sm font-medium">Dataset diperlukan</p>
+        <p class="text-[12px] text-ink/65">Ingest CSV M1 sebelum menjalankan backtest.</p>
+        <a href="{% url 'marketdata:dataset_list' %}" class="btn-primary mt-2">Ke dataset</a>
+      </div>
+    </div>
+  </section>
+  {% else %}
+  <section class="panel mt-3">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Konfigurasi run</h2>
+        <p class="panel-subtitle">Screening <span class="font-mono">*</span> menjalankan 5 strategi</p>
+      </div>
+    </div>
+    <div class="panel-body">
+      <form method="post" class="space-y-3">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<p class="text-sm text-loss">{{ form.non_field_errors.0 }}</p>{% endif %}
+
+        <label class="block text-[12px] font-medium">{{ form.dataset.label }}{{ form.dataset }}</label>
+        <label class="block text-[12px] font-medium">{{ form.strategy_name.label }}{{ form.strategy_name }}</label>
+
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <label class="block text-[12px] font-medium">{{ form.initial_equity.label }}{{ form.initial_equity }}</label>
+          <label class="block text-[12px] font-medium">{{ form.risk_pct.label }}{{ form.risk_pct }}</label>
+          <label class="block text-[12px] font-medium">{{ form.contract_size.label }}{{ form.contract_size }}</label>
+          <label class="block text-[12px] font-medium">{{ form.fee.label }}{{ form.fee }}</label>
+          <label class="block text-[12px] font-medium">{{ form.commission_per_lot.label }}{{ form.commission_per_lot }}</label>
+          <label class="block text-[12px] font-medium">{{ form.spread.label }}{{ form.spread }}</label>
+          <label class="block text-[12px] font-medium">{{ form.slippage.label }}{{ form.slippage }}</label>
+          <label class="block text-[12px] font-medium">{{ form.in_sample_end.label }}{{ form.in_sample_end }}</label>
+          <label class="block text-[12px] font-medium">{{ form.oos_start.label }}{{ form.oos_start }}</label>
+        </div>
+
+        <label class="flex items-center gap-2 text-[12px]">{{ form.multi_deep }} {{ form.multi_deep.label }}</label>
+
+        <div class="flex gap-2 pt-2">
+          <button type="submit" class="btn-primary">Enqueue run</button>
+          <a href="{% url 'backtests:run_list' %}" class="btn-ghost">Batal</a>
+        </div>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

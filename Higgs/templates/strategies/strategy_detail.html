@@ -1,37 +1,87 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="flex flex-col gap-4">
-  <div>
-    <p class="font-mono text-[12px] text-ink/55 dark:text-ink-dark/50">{{ name }}</p>
-    <h2 class="mt-1 text-base font-medium">Logic spec</h2>
-    <pre class="mt-2 max-w-3xl whitespace-pre-wrap rounded-[6px] border border-black/10 bg-surface p-3 font-mono text-[12px] leading-relaxed text-ink/85 dark:border-white/10 dark:bg-surface-dark dark:text-ink-dark/80">{{ logic_spec }}</pre>
+<div class="mx-auto flex max-w-[1400px] flex-col gap-3">
+  <p class="breadcrumb">
+    <a href="{% url 'core:overview' %}">Ringkasan</a>
+    / <a href="{% url 'strategies:strategy_list' %}">Strategi</a>
+    / <span class="font-mono text-ink dark:text-ink-dark">{{ name }}</span>
+  </p>
+
+  <div class="grid gap-3 lg:grid-cols-3">
+    <section class="panel lg:col-span-2">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title font-mono">{{ name }}</h2>
+          <p class="panel-subtitle">Logic spec · acuan export MQL5</p>
+        </div>
+        {% if allow_short %}<span class="badge badge-accent">Long / Short</span>{% else %}<span class="badge badge-neutral">Long only</span>{% endif %}
+      </div>
+      <div class="panel-body">
+        <pre class="whitespace-pre-wrap rounded-[6px] border border-black/10 bg-canvas/40 p-3 font-mono text-[12px] leading-relaxed text-ink/85 dark:border-white/10 dark:bg-canvas-dark/40 dark:text-ink-dark/85">{{ logic_spec }}</pre>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Eksekusi</h2>
+          <p class="panel-subtitle">Kontrak backtester</p>
+        </div>
+      </div>
+      <div class="panel-body space-y-2 text-[12px]">
+        <div class="flex justify-between gap-2 border-b border-black/8 pb-2 dark:border-white/8">
+          <span class="text-ink/55 dark:text-ink-dark/50">Signal</span>
+          <span class="font-mono">1 / -1 / 0</span>
+        </div>
+        <div class="flex justify-between gap-2 border-b border-black/8 pb-2 dark:border-white/8">
+          <span class="text-ink/55 dark:text-ink-dark/50">Entry</span>
+          <span class="font-mono">Next bar open</span>
+        </div>
+        <div class="flex justify-between gap-2 border-b border-black/8 pb-2 dark:border-white/8">
+          <span class="text-ink/55 dark:text-ink-dark/50">Exit</span>
+          <span class="font-mono">SL / TP / EOD</span>
+        </div>
+        <a href="{% url 'backtests:run_new' %}" class="btn-primary mt-2 w-full">Jalankan strategi ini</a>
+      </div>
+    </section>
   </div>
 
-  <div>
-    <h2 class="text-sm font-medium">Default params</h2>
-    {% if default_params %}
-    <div class="mt-2 overflow-x-auto">
-      <table class="data-table max-w-xl">
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Default params</h2>
+        <p class="panel-subtitle">Override via form run · notebook baseline</p>
+      </div>
+    </div>
+    <div class="panel-body-flush overflow-x-auto">
+      {% if default_params %}
+      <table class="data-table data-table-compact max-w-4xl">
         <thead>
           <tr>
-            <th>Key</th>
-            <th>Value</th>
+            <th>Parameter</th>
+            <th>Nilai</th>
+            <th>Parameter</th>
+            <th>Nilai</th>
           </tr>
         </thead>
         <tbody>
-          {% for key, value in default_params %}
+          {% for pair in param_pairs %}
           <tr>
-            <td class="font-mono text-[12px]">{{ key }}</td>
-            <td class="font-mono text-[12px]">{{ value }}</td>
+            <td class="font-mono text-[12px] text-ink/70">{{ pair.0.0 }}</td>
+            <td class="font-mono text-[12px]">{{ pair.0.1 }}</td>
+            <td class="font-mono text-[12px] text-ink/70">{% if pair.1 %}{{ pair.1.0 }}{% endif %}</td>
+            <td class="font-mono text-[12px]">{% if pair.1 %}{{ pair.1.1 }}{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+      {% else %}
+      <div class="panel-body">
+        <p class="text-sm text-ink/75 dark:text-ink-dark/75">Tidak ada default params.</p>
+      </div>
+      {% endif %}
     </div>
-    {% else %}
-    <p class="mt-1 text-sm text-ink/75 dark:text-ink-dark/75">Tidak ada default params.</p>
-    {% endif %}
-  </div>
-</section>
+  </section>
+</div>
 {% endblock %}

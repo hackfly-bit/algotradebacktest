@@ -1,0 +1,47 @@
+<section class="panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Trades</h2>
+    <p class="panel-subtitle">Full sample · {{ page_obj.paginator.count }} baris</p>
+  </div>
+  <div class="panel-body-flush overflow-x-auto">
+    {% if page_obj.object_list %}
+    <table class="data-table data-table-compact">
+      <thead>
+        <tr>
+          <th>Entry</th>
+          <th>Exit</th>
+          <th>Dir</th>
+          <th class="text-right">PnL</th>
+          <th class="text-right">Ret%</th>
+          <th>Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in page_obj.object_list %}
+        <tr>
+          <td class="font-mono text-[11px] whitespace-nowrap">{{ t.entry_time|date:"Y-m-d H:i" }}</td>
+          <td class="font-mono text-[11px] whitespace-nowrap">{{ t.exit_time|date:"Y-m-d H:i" }}</td>
+          <td class="font-mono">{% if t.direction > 0 %}L{% else %}S{% endif %}</td>
+          <td class="text-right font-mono text-[12px] {% if t.pnl >= 0 %}metric-positive{% else %}metric-negative{% endif %}">{{ t.pnl|floatformat:2 }}</td>
+          <td class="text-right font-mono text-[12px]">{{ t.return_pct|floatformat:4 }}</td>
+          <td><span class="badge badge-neutral">{{ t.reason }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if page_obj.has_other_pages %}
+    <div class="flex gap-2 border-t border-black/10 px-3 py-2 dark:border-white/10">
+      {% if page_obj.has_previous %}
+      <a class="btn-ghost-sm" href="?tab=trades&page={{ page_obj.previous_page_number }}">← Prev</a>
+      {% endif %}
+      <span class="self-center text-[11px] text-ink/55">Hal {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+      <a class="btn-ghost-sm" href="?tab=trades&page={{ page_obj.next_page_number }}">Next →</a>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="panel-body"><div class="empty-state"><p class="text-sm">Belum ada trade.</p></div></div>
+    {% endif %}
+  </div>
+</section>

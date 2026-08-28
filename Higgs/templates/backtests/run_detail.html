@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load backtest_extras %}
+
+{% block content %}
+<div class="mx-auto flex max-w-[1400px] flex-col gap-3">
+  <p class="breadcrumb">
+    <a href="{% url 'backtests:run_list' %}">Run</a> /
+    <span class="font-mono">#{{ run.pk }}</span> /
+    {{ run.strategy_name }}
+  </p>
+
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+      {% if run.status == "done" %}<span class="badge badge-profit">done</span>
+      {% elif run.status == "running" %}<span class="badge badge-warn">running</span>
+      {% elif run.status == "failed" %}<span class="badge badge-loss">failed</span>
+      {% else %}<span class="badge badge-neutral">{{ run.status }}</span>{% endif %}
+      <span class="text-[12px] text-ink/60">{{ run.dataset.source_name }}</span>
+    </div>
+    <div
+      id="run-live-status"
+      hx-get="{% url 'backtests:run_status' run.pk %}"
+      hx-trigger="{% if run.status == 'queued' or run.status == 'running' %}load, every 2s{% else %}none{% endif %}"
+      hx-swap="innerHTML"
+    >
+      <span class="text-[11px] text-ink/55">{% if run.status == 'running' %}Menghitung…{% else %}Antrian{% endif %}</span>
+    </div>
+  </div>
+
+  {% if run.status == "failed" and run.error_message %}
+  <div class="rounded-[6px] border border-loss/30 bg-loss/5 px-3 py-2 text-sm text-loss">{{ run.error_message }}</div>
+  {% endif %}
+
+  <nav class="flex flex-wrap gap-1 border-b border-black/10 pb-1 dark:border-white/10">
+    {% for t, label in tabs %}
+    <a
+      href="{% url 'backtests:run_detail' run.pk %}?tab={{ t }}"
+      class="rounded-[6px] px-2.5 py-1 text-[12px] {% if active_tab == t %}bg-accent/12 font-medium text-accent dark:bg-accent-dark/15 dark:text-accent-dark{% else %}text-ink/70 hover:bg-black/5 dark:text-ink-dark/70 dark:hover:bg-white/5{% endif %}"
+    >{{ label }}</a>
+    {% endfor %}
+  </nav>
+
+  <div id="tab-content">
+    {% if active_tab == "overview" %}
+      {% include "backtests/partials/tab_overview.html" %}
+    {% elif active_tab == "equity" %}
+      {% include "backtests/partials/tab_equity.html" %}
+    {% elif active_tab == "trades" %}
+      {% include "backtests/partials/tab_trades.html" %}
+    {% elif active_tab == "splits" %}
+      {% include "backtests/partials/tab_splits.html" %}
+    {% elif active_tab == "walkforward" %}
+      {% include "backtests/partials/tab_walkforward.html" %}
+    {% elif active_tab == "robustness" %}
+      {% include "backtests/partials/tab_robustness.html" %}
+    {% elif active_tab == "cost" %}
+      {% include "backtests/partials/tab_cost.html" %}
+    {% elif active_tab == "montecarlo" %}
+      {% include "backtests/partials/tab_montecarlo.html" %}
+    {% elif active_tab == "gate" %}
+      {% include "backtests/partials/tab_gate.html" %}
+    {% elif active_tab == "export" %}
+      {% include "backtests/partials/tab_export.html" %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

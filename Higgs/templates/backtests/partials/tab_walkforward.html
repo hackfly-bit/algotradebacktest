@@ -1,0 +1,71 @@
+{% load backtest_extras %}
+<section class="flex flex-col gap-3">
+  <div class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Walk-forward summary</h2>
+      <p class="panel-subtitle">Grid EMA fast {15, 20, 25} · train 3y / test 1y / step 1y</p>
+    </div>
+    <div class="panel-body">
+      {% if wf_summary %}
+      <div class="flex flex-wrap items-center gap-3">
+        {% if wf_summary.extras.wf_pass %}
+        <span class="badge badge-profit">WF_PASS</span>
+        {% else %}
+        <span class="badge badge-loss">WF_FAIL</span>
+        {% endif %}
+        <span class="text-[12px] text-ink/70">
+          {{ wf_summary.extras.n_folds|default:0 }} fold ·
+          median val return
+          <span class="font-mono {% if wf_summary.extras.median_val_return >= 0 %}metric-positive{% else %}metric-negative{% endif %}">
+            {{ wf_summary.extras.median_val_return|pct }}
+          </span>
+          · pct positive Sharpe
+          <span class="font-mono">{{ wf_summary.extras.pct_positive_sharpe|pct }}</span>
+        </span>
+      </div>
+      {% else %}
+      <p class="text-sm text-ink/60">Belum ada hasil walk-forward. Pastikan MULTI_DEEP aktif dan data cukup panjang (≥4 tahun).</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Fold detail</h2>
+    </div>
+    <div class="panel-body-flush overflow-x-auto">
+      {% if wf_folds %}
+      <table class="data-table data-table-compact">
+        <thead>
+          <tr>
+            <th>Develop</th>
+            <th>Validate</th>
+            <th class="text-right">EMA fast</th>
+            <th class="text-right">Dev Sharpe</th>
+            <th class="text-right">Val Sharpe</th>
+            <th class="text-right">Val return</th>
+            <th class="text-right">Val DD</th>
+            <th class="text-right">Trades</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fold in wf_folds %}
+          <tr>
+            <td class="font-mono text-[11px]">{{ fold.dev_start }} → {{ fold.dev_end }}</td>
+            <td class="font-mono text-[11px]">{{ fold.val_start }} → {{ fold.val_end }}</td>
+            <td class="text-right font-mono text-[12px]">{{ fold.best_ema_fast }}</td>
+            <td class="text-right font-mono text-[12px]">{{ fold.dev_sharpe|floatformat:3 }}</td>
+            <td class="text-right font-mono text-[12px] {% if fold.positive_sharpe %}metric-positive{% else %}metric-negative{% endif %}">{{ fold.val_sharpe|floatformat:3 }}</td>
+            <td class="text-right font-mono text-[12px] {% if fold.val_return >= 0 %}metric-positive{% else %}metric-negative{% endif %}">{{ fold.val_return|pct }}</td>
+            <td class="text-right font-mono text-[12px] metric-negative">{{ fold.val_max_dd|pct }}</td>
+            <td class="text-right font-mono text-[12px]">{{ fold.val_trades }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="px-3 py-4 text-sm text-ink/60">Tidak ada fold — rentang data terlalu pendek untuk window 3+1 tahun.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>

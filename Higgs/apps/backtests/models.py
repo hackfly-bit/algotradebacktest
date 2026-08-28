@@ -100,3 +100,75 @@ class MetricSet(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=["run", "split"])]
+
+
+class WalkForwardFold(models.Model):
+    run = models.ForeignKey(BacktestRun, on_delete=models.CASCADE, related_name="wf_folds")
+    dev_start = models.DateField()
+    dev_end = models.DateField()
+    val_start = models.DateField()
+    val_end = models.DateField()
+    best_ema_fast = models.IntegerField(null=True, blank=True)
+    dev_sharpe = models.FloatField(null=True, blank=True)
+    val_sharpe = models.FloatField(null=True, blank=True)
+    val_return = models.FloatField(null=True, blank=True)
+    val_max_dd = models.FloatField(null=True, blank=True)
+    val_trades = models.IntegerField(null=True, blank=True)
+    positive_sharpe = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["dev_start"]
+        indexes = [models.Index(fields=["run"])]
+
+
+class RobustnessRow(models.Model):
+    run = models.ForeignKey(BacktestRun, on_delete=models.CASCADE, related_name="robustness_rows")
+    kind = models.CharField(max_length=32)
+    label = models.CharField(max_length=64)
+    oos_return = models.FloatField(null=True, blank=True)
+    oos_sharpe = models.FloatField(null=True, blank=True)
+    oos_dd = models.FloatField(null=True, blank=True)
+    trades = models.IntegerField(null=True, blank=True)
+    extras = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["run", "kind"])]
+
+
+class MonteCarloSummary(models.Model):
+    run = models.ForeignKey(BacktestRun, on_delete=models.CASCADE, related_name="mc_summaries")
+    mode = models.CharField(max_length=32)
+    n_sims = models.IntegerField(default=10_000)
+    median_final = models.FloatField(null=True, blank=True)
+    p5_final = models.FloatField(null=True, blank=True)
+    p25_final = models.FloatField(null=True, blank=True)
+    p50_final = models.FloatField(null=True, blank=True)
+    p75_final = models.FloatField(null=True, blank=True)
+    p95_final = models.FloatField(null=True, blank=True)
+    median_max_dd = models.FloatField(null=True, blank=True)
+    p95_worst_dd = models.FloatField(null=True, blank=True)
+    prob_loss = models.FloatField(null=True, blank=True)
+    prob_dd_gt_30 = models.FloatField(null=True, blank=True)
+    extras = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["run", "mode"])]
+
+
+class DecisionGate(models.Model):
+    class Status(models.TextChoices):
+        FAIL = "FAIL", "FAIL"
+        FRAGILE = "FRAGILE", "FRAGILE"
+        ACCEPTABLE = "ACCEPTABLE", "ACCEPTABLE"
+        ROBUST = "ROBUST", "ROBUST"
+
+    run = models.OneToOneField(BacktestRun, on_delete=models.CASCADE, related_name="decision_gate")
+    in_sample = models.BooleanField(default=False)
+    out_of_sample = models.BooleanField(default=False)
+    walk_forward = models.BooleanField(default=False)
+    parameter_stability = models.BooleanField(default=False)
+    cost_stress = models.BooleanField(default=False)
+    monte_carlo = models.BooleanField(default=False)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.FAIL)
+    implement_mql5 = models.BooleanField(default=False)
+    n_pass = models.IntegerField(default=0)

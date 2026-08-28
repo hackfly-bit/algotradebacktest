@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mx-auto flex max-w-[1400px] flex-col gap-3">
+  <div class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <p class="breadcrumb"><a href="{% url 'core:overview' %}">Ringkasan</a> / Run</p>
+    </div>
+    <a href="{% url 'backtests:run_new' %}" class="btn-primary">+ Run baru</a>
+  </div>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Filter</h2>
+      </div>
+      <form method="get" class="flex flex-wrap items-center gap-2">
+        <select name="status" class="field-input !mt-0 w-auto text-[12px]">
+          <option value="">Semua status</option>
+          <option value="done" {% if status_filter == "done" %}selected{% endif %}>done</option>
+          <option value="running" {% if status_filter == "running" %}selected{% endif %}>running</option>
+          <option value="queued" {% if status_filter == "queued" %}selected{% endif %}>queued</option>
+          <option value="failed" {% if status_filter == "failed" %}selected{% endif %}>failed</option>
+        </select>
+        <input type="text" name="strategy" value="{{ strategy_filter }}" placeholder="strategi" class="field-input !mt-0 w-40 text-[12px]">
+        <button type="submit" class="btn-ghost-sm">Terapkan</button>
+      </form>
+    </div>
+    <div class="panel-body-flush overflow-x-auto">
+      {% if runs %}
+      <table class="data-table data-table-compact">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Strategi</th>
+            <th>Dataset</th>
+            <th>Status</th>
+            <th class="text-right">Equity</th>
+            <th class="text-right">Sharpe</th>
+            <th class="text-right">Trades</th>
+            <th>Dibuat</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in runs %}
+          <tr>
+            <td class="font-mono text-[12px]"><a class="text-accent dark:text-accent-dark" href="{% url 'backtests:run_detail' row.run.pk %}">#{{ row.run.pk }}</a></td>
+            <td class="font-mono text-[12px]">{{ row.run.strategy_name }}</td>
+            <td class="text-[12px]">{{ row.run.dataset.source_name|truncatechars:24 }}</td>
+            <td>
+              {% if row.run.status == "done" %}<span class="badge badge-profit">done</span>
+              {% elif row.run.status == "running" %}<span class="badge badge-warn">running</span>
+              {% elif row.run.status == "failed" %}<span class="badge badge-loss">failed</span>
+              {% else %}<span class="badge badge-neutral">{{ row.run.status }}</span>{% endif %}
+            </td>
+            <td class="text-right font-mono text-[12px]">{% if row.metric %}{{ row.metric.final_equity|floatformat:0 }}{% else %}—{% endif %}</td>
+            <td class="text-right font-mono text-[12px]">{% if row.metric %}{{ row.metric.sharpe|floatformat:3 }}{% else %}—{% endif %}</td>
+            <td class="text-right font-mono text-[12px]">{% if row.metric %}{{ row.metric.trades }}{% else %}—{% endif %}</td>
+            <td class="font-mono text-[11px] text-ink/60">{{ row.run.created_at|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="panel-body">
+        <div class="empty-state">
+          <p class="text-sm font-medium">Belum ada run</p>
+          <a href="{% url 'backtests:run_new' %}" class="btn-primary mt-2">Buat run pertama</a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}
